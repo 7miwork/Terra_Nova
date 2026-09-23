@@ -93,6 +93,11 @@ Alte Spielstände bleiben ladbar: Neue Felder (`gegner`, `verteidiger`,
 Die erzeugten Dateien liegen bei — die Skripte braucht man nur zum
 Neuerzeugen oder zum eigenen Anpassen (Anleitungen: `BILDER_ANLEITUNG.md`).
 
+## Repository
+
+Der Quellcode liegt auf GitHub: <https://github.com/7miwork/Terra_Nova>
+(privates Repository – Zugriff nur für eingeladene Personen.)
+
 ## Hinweis für die Pflege von main.py
 
 `main.py` enthält historisch gemischte Zeilenenden (CRLF und LF). Beim
