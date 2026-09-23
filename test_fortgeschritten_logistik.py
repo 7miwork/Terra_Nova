@@ -43,6 +43,17 @@ assert "gut_vernetzt" in achievements_ids
 assert any(m["id"] == "erste_strasse" for m in missionen.MISSIONEN)
 
 # Neues Spiel gibt einen leeren, definierten Zustand.
+main.neues_spiel_starten()
+logistik.zustand_zuruecksetzen()
+assert logistik.LOGISTIK_AKTIV is True
+
+# ── Hilfsaufbau: Basis links, Gebaeude rechts ohne Verbindung ────────────
+basis = {"typ": 0, "kachel_x": 2, "kachel_y": 2}
+reaktor = {"typ": 1, "kachel_x": 6, "kachel_y": 4}   # produziert Energie
+park = {"typ": 19, "kachel_x": 20, "kachel_y": 20}   # Ausnahme ohne Strasse
+uni = {"typ": 7, "kachel_x": 10, "kachel_y": 5}      # 2x3 Mehrkachel-Gebaeude
+main.liste_gebaeude = [basis, reaktor, park, uni]
+
 # ── Test 1: Ohne Strasse steht der Reaktor still ─────────────────────────
 ergebnis = logistik.netz_aktualisieren(main.liste_gebaeude)
 assert ergebnis["ohne_anbindung"] == 2, "Reaktor und Uni muessen stillstehen"
@@ -58,7 +69,9 @@ main.ressourcen_dict["holz"] = 50.0
 main.ressourcen_dict["bevoelkerung"] = 10.0
 ressourcen.ressourcen_produzieren(main.ressourcen_dict, main.liste_gebaeude)
 assert reaktor["arbeitet"] is False
-assert main.ressourcen_dict["energie"] == 50.0
+# Die Basis produziert als Ausnahme weiter +1 Energie pro Tick — genau
+# diese Aenderung ist erlaubt; der Reaktor hat nichts beigetragen.
+assert main.ressourcen_dict["energie"] == 51.0
 
 # Effizienz: Der Wirtschaftstick darf das Netz NICHT neu berechnen —
 # nur Bauen, Abriss, Laden und ein neues Spiel aktualisieren es.
@@ -81,6 +94,18 @@ assert "stillstand_grund" not in uni, "Uni grenzt mit Kachel (10,5) an Strasse (
 assert logistik.ist_angebunden(reaktor) is True
 
 # Wirtschaftstick: Der Reaktor arbeitet und verbraucht 2 Holz pro Tick —
+# der Verbrauch zeigt, dass wirklich gerechnet wird.
+holz_vorher = main.ressourcen_dict["holz"]
+ressourcen.ressourcen_produzieren(main.ressourcen_dict, main.liste_gebaeude)
+assert reaktor["arbeitet"] is True
+assert main.ressourcen_dict["holz"] < holz_vorher
+
+# Stillstehende Gebaeude belegen kein Personal: Bei 10 Bewohnern zählt
+# nur das Personal der ANGEBUNDENEN Gebaeude als Bedarf.
+verfuegbar, bedarf = ressourcen.personal_info(main.ressourcen_dict,
+                                              main.liste_gebaeude)
+assert verfuegbar == 10
+assert bedarf == ressourcen.personalbedarf(1) + ressourcen.personalbedarf(7)
 
 # ── Test 3: Strasse abreiissen kappt das Netz sofort ─────────────────────
 # Die Strasse direkt neben der Uni (9,5) wird entfernt.
@@ -105,6 +130,12 @@ assert reaktor["stillstand_grund"] == logistik.STILLSTAND_GRUND
 logistik.LOGISTIK_AKTIV = False
 ergebnis = logistik.netz_aktualisieren(main.liste_gebaeude)
 assert ergebnis["ohne_anbindung"] == 0
+assert "stillstand_grund" not in reaktor
+main.ressourcen_dict["holz"] = 50.0
+ressourcen.ressourcen_produzieren(main.ressourcen_dict, main.liste_gebaeude)
+assert reaktor["arbeitet"] is True
+logistik.LOGISTIK_AKTIV = True          # Schalter fuer weitere Tests zurueck
+logistik.netz_aktualisieren(main.liste_gebaeude)
 
 # ── Test 6: Achievements und Mission zur Logistik ────────────────────────
 # Wieder alles anbinden (gleiche Strassen wie oben) und pruefen.
@@ -145,33 +176,3 @@ os.remove(spielstand.DATEI)
 pygame.quit()
 print("FORTGESCHRITTEN_LOGISTIK_TESTS_OK")
 
-assert "stillstand_grund" not in reaktor
-main.ressourcen_dict["holz"] = 50.0
-ressourcen.ressourcen_produzieren(main.ressourcen_dict, main.liste_gebaeude)
-assert reaktor["arbeitet"] is True
-logistik.LOGISTIK_AKTIV = True          # Schalter fuer weitere Tests zurueck
-logistik.netz_aktualisieren(main.liste_gebaeude)
-
-# der Verbrauch zeigt, dass wirklich gerechnet wird.
-holz_vorher = main.ressourcen_dict["holz"]
-ressourcen.ressourcen_produzieren(main.ressourcen_dict, main.liste_gebaeude)
-assert reaktor["arbeitet"] is True
-assert main.ressourcen_dict["holz"] < holz_vorher
-
-# Stillstehende Gebaeude belegen kein Personal: Bei 10 Bewohnern zählt
-# nur das Personal der ANGEBUNDENEN Gebaeude als Bedarf.
-verfuegbar, bedarf = ressourcen.personal_info(main.ressourcen_dict,
-                                              main.liste_gebaeude)
-assert verfuegbar == 10
-assert bedarf == ressourcen.personalbedarf(1) + ressourcen.personalbedarf(7)
-
-main.neues_spiel_starten()
-logistik.zustand_zuruecksetzen()
-assert logistik.LOGISTIK_AKTIV is True
-
-# ── Hilfsaufbau: Basis links, Gebaeude rechts ohne Verbindung ────────────
-basis = {"typ": 0, "kachel_x": 2, "kachel_y": 2}
-reaktor = {"typ": 1, "kachel_x": 6, "kachel_y": 4}   # produziert Energie
-park = {"typ": 19, "kachel_x": 20, "kachel_y": 20}   # Ausnahme ohne Strasse
-uni = {"typ": 7, "kachel_x": 10, "kachel_y": 5}      # 2x3 Mehrkachel-Gebaeude
-main.liste_gebaeude = [basis, reaktor, park, uni]

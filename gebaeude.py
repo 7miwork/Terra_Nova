@@ -34,6 +34,14 @@ GEBAEUDE_TYPEN = [
     {"name": "Park", "bild": "park_32x32.png", "farbe": (80, 190, 100), "kuerzel": "P", "taste": "", "breite": 1, "hoehe": 1},
     # Schülergebäude: Der Solarreaktor liefert Energie ohne Kohleverbrauch.
     {"name": "Solarreaktor", "bild": "solareaktor_32x32.png", "farbe": (70, 170, 240), "kuerzel": "S", "taste": "", "breite": 1, "hoehe": 1},
+    # ── Fortgeschrittener Kurs (Gegner): Verteidigung, Indizes 21 bis 23 ─────
+    # NEUE TYPOLEN werden immer HINTEN angehaengt: Spielstaende speichern den
+    # Typ-Index, therefore wuerde Umsortieren alte Spielstaende zerstoeren.
+    # Die Bilder sind Platzhalter (mit bilder_erzeugen.py erzeugt) — die
+    # Schuelerinnen und Schueler zeichnen spaeter eigene (wie bei Park/Solar).
+    {"name": "Kaserne", "bild": "kaserne.png", "farbe": (190, 90, 90), "kuerzel": "K", "taste": "", "breite": 1, "hoehe": 1},
+    {"name": "Raumschiffwerft", "bild": "raumschiffwerft.png", "farbe": (150, 160, 220), "kuerzel": "W", "taste": "", "breite": 2, "hoehe": 2},
+    {"name": "Laserturm", "bild": "laserturm.png", "farbe": (255, 120, 120), "kuerzel": "T", "taste": "", "breite": 1, "hoehe": 1},
 ]
 
 # Die Zifferntasten wählen Kategorien statt einzelner Gebäude. Mehrere Gebäude
@@ -47,7 +55,9 @@ GEBAEUDE_KATEGORIEN = {
     "6": {"name": "Energie", "typen": [1, 10, 20]},
     "7": {"name": "Infrastruktur", "typen": [9, 14]},
     "8": {"name": "Handel", "typen": [5, 16]},
-    "9": {"name": "Spezial / Prestige", "typen": [17, 19, 20]},
+    # Fortgeschrittener Kurs (Gegner): Kategorie 9 bündelt jetzt Prestige
+    # UND Verteidigung, deshalb hat sie einen neuen Namen bekommen.
+    "9": {"name": "Spezial / Verteidigung", "typen": [17, 19, 20, 21, 22, 23]},
 }
 
 _fenster = None

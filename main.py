@@ -1,6 +1,6 @@
 """
 =============================================================================
-PROJEKT: Weltraum-Koloniespiel  —  wie FINAL EARTH 2
+PROJEKT: Terra_Nova  —  Koloniespiel auf einem fremden Planeten
 STUNDE 7 — Bevölkerung & Wohnungen
 =============================================================================
 
@@ -83,6 +83,7 @@ import achievements # Fortschritte und Punkte
 import missionen    # Missionszentrale und Belohnungen
 import ton          # Musik und Soundeffekte (Fortgeschrittener Kurs)
 import logistik     # Strassen, Netz und Versorgung (Fortgeschrittener Kurs)
+import gegner       # Feindliche Angriffe und Verteidigung (Fortgeschrittener Kurs)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -98,7 +99,11 @@ import logistik     # Strassen, Netz und Versorgung (Fortgeschrittener Kurs)
 # In Final Earth 2 ist das Fenster ähnlich groß, damit man viel sieht.
 BILD_BREITE         = 1000
 BILD_HOEHE          = 700
-BILD_TITEL          = "Weltraum-Koloniespiel — wie Final Earth 2"
+# Der Spielname steht NUR HIER. Fenstertitel, Hauptmenü und alle anderen
+# Anzeigen holen den Namen aus dieser einen Konstanten.
+SPIELNAME           = "Terra_Nova"
+# Der Fenstertitel ist genau der Spielname - ohne Zusatz wie "wie Final Earth 2".
+BILD_TITEL          = SPIELNAME
 BILDER_PRO_SEKUNDE  = 60     # FPS — wie flüssig das Spiel läuft
 
 # ── Karten-Einstellungen ────────────────────────────────────────────────────
@@ -259,28 +264,36 @@ NIEDERLAGE_NULLRESSOURCE_TICKS = 12
 REGELWERKE = {
     "standard": {
         "name": "Standard",
-        "beschreibung": "30 Bewohner + Koloniezentrum; 12 Ticks ohne Nahrung/Energie = Niederlage.",
+        "beschreibung": "30 Bewohner + Zentrum; 12 Ticks ohne Versorgung = Niederlage. Gegner greifen an.",
+        "gegner_aktiv": True,
+        "gegner_faktor": 1.0,
         "sieg_bevoelkerung": 30,
         "sieg_aktiv": True,
         "niederlage_ticks": 12,
     },
     "entspannt": {
         "name": "Entspannt",
-        "beschreibung": "30 Bewohner + Koloniezentrum; keine automatische Niederlage.",
+        "beschreibung": "30 Bewohner + Zentrum; keine Niederlage und keine feindlichen Angriffe.",
+        "gegner_aktiv": False,
+        "gegner_faktor": 1.0,
         "sieg_bevoelkerung": 30,
         "sieg_aktiv": True,
         "niederlage_ticks": None,
     },
     "freies_spiel": {
         "name": "Freies Spiel",
-        "beschreibung": "Keine automatische Sieg- oder Niederlagebedingung.",
+        "beschreibung": "Keine automatische Sieg-/Niederlage; dafür ganz ohne feindliche Angriffe.",
+        "gegner_aktiv": False,
+        "gegner_faktor": 1.0,
         "sieg_bevoelkerung": 0,
         "sieg_aktiv": False,
         "niederlage_ticks": None,
     },
     "ueberleben": {
         "name": "Überleben",
-        "beschreibung": "40 Bewohner + Koloniezentrum; nur 6 Ticks ohne Nahrung/Energie.",
+        "beschreibung": "40 Bewohner + Zentrum; nur 6 Ticks ohne Versorgung. Gegner +30% stärker.",
+        "gegner_aktiv": True,
+        "gegner_faktor": 1.3,
         "sieg_bevoelkerung": 40,
         "sieg_aktiv": True,
         "niederlage_ticks": 6,
@@ -553,6 +566,36 @@ def achievements_pruefen():
         ton.sound_abspielen("achievement")
 
 
+def gegner_ereignis_verarbeiten(ereignis):
+    """Wertet die Rueckgabe von gegner.gegner_tick() aus (HUD + Erfolge).
+
+    Die Sounds (Sirene, Abwehr-Jingle, Pluenderung) spielt bereits das
+    gegner-Modul selbst ab - hier geht es nur um HUD-Text und Achievements.
+    """
+    if not isinstance(ereignis, dict):
+        return
+    art = ereignis.get("ereignis")
+    if art == "warnung":
+        hud.meldung_anzeigen(
+            f"ACHTUNG: Angriff in {ereignis.get('warnzeit', 0)} Ticks! "
+            f"Gegnerstaerke {ereignis.get('staerke', 0):.1f}")
+    elif art == "abwehr_erfolg":
+        belohnung = ereignis.get("belohnung", {})
+        verluste = ereignis.get("verluste", {})
+        hud.meldung_anzeigen(
+            f"Angriff abgewehrt! +{belohnung.get('gold', 0)} Gold, "
+            f"+{belohnung.get('forschung', 0)} Forschung "
+            f"({verluste.get('verteidiger', 0)} Verteidiger, "
+            f"{verluste.get('raumschiffe', 0)} Schiffe gefallen)")
+        achievements.angriff_abgewehrt()
+        achievements_pruefen()
+    elif art == "ausgeraubt":
+        verluste = ereignis.get("verluste", {})
+        hud.meldung_anzeigen(
+            "Kolonie ausgeraubt! 30 Prozent der Rohstoffe weg "
+            f"({verluste.get('verteidiger', 0)} Verteidiger gefallen)")
+
+
 def menues_schliessen():
     """Schließt alle bisherigen Vollbild-Overlays vor dem Wechsel."""
     if menu.menu_ist_offen():
@@ -601,7 +644,7 @@ def _neue_ressourcen():
     return {"gold": 100, "energie": 50, "holz": 30, "stein": 20,
             "bevoelkerung": 10, "nahrung": 50, "forschung": 0,
             "kohle": 0, "eisen": 0, "roboter": 0, "stahl": 0,
-            "zufriedenheit": 0.0}
+            "verteidiger": 0, "raumschiffe": 0, "zufriedenheit": 0.0}
 
 
 def neues_spiel_starten():
@@ -641,6 +684,8 @@ def neues_spiel_starten():
     logistik.zustand_zuruecksetzen()
     logistik.netz_aktualisieren(liste_gebaeude)
     ressourcen.zustand_importieren({})
+    # Fortgeschrittener Kurs (Gegner): neues Spiel = Friedenszeit von vorn.
+    gegner.zustand_zuruecksetzen()
     spiel_status = "spiel"
     # Fortgeschrittener Kurs: Nach dem Endmenue darf die Musik wieder laufen.
     ton.musik_starten()
@@ -696,6 +741,10 @@ def spielstand_laden():
     # Alte Spielstände kennen Zufriedenheit noch nicht. Dann startet die
     # Kolonie neutral bei 0 statt mit einem fehlenden Dictionary-Schlüssel.
     ressourcen_dict.setdefault("zufriedenheit", 0.0)
+    # Fortgeschrittener Kurs (Gegner): alte Spielstaende kennen die
+    # Militaerressourcen noch nicht - dann startet die Kolonie ohne beide.
+    ressourcen_dict.setdefault("verteidiger", 0)
+    ressourcen_dict.setdefault("raumschiffe", 0)
     ressourcen.zufriedenheit_begrenzen(ressourcen_dict)
     liste_gebaeude = gebaeude_liste
     kamera = daten.get("kamera", {})
@@ -840,6 +889,17 @@ def ziel_zeichnen():
     fenster.blit(panel, (BILD_BREITE - 312, 54))
 
 
+def menue_titel():
+    """Titel des Hauptmenüs: SPIELNAME in Großbuchstaben, wenn das gefahrlos ist.
+
+    Großschreibung kann Zeichen verändern (ß wird zu SS). Deshalb wird der
+    Name nur dann in Versalien gezeigt, wenn er sich abgesehen von der
+    Groß-/Kleinschreibung nicht ändert — sonst bleibt er wie geschrieben.
+    """
+    gross = SPIELNAME.upper()
+    return gross if gross.lower() == SPIELNAME.lower() else SPIELNAME
+
+
 def hauptmenue_zeichnen():
     info = [
         f"Aktive Regeln: {aktives_regelwerk()['name']}",
@@ -853,7 +913,7 @@ def hauptmenue_zeichnen():
                 ("laden", "Spielstand laden", "L"),
                 ("beenden", "Spiel beenden", "Esc")]
     deaktiviert = set() if spielstand.existiert() else {"laden"}
-    spiel_menue.menu_zeichnen("WELTRAUM-KOLONIE", "Baue eine sichere Heimat auf dem fremden Planeten.",
+    spiel_menue.menu_zeichnen(menue_titel(), "Baue eine sichere Heimat auf dem fremden Planeten.",
                               optionen, deaktiviert, info, (90, 190, 255))
 
 
@@ -1542,6 +1602,11 @@ def spielwelt_zeichnen():
                      _auswahl_position,
                      gebaeude.bild_fuer_typ)
     ziel_zeichnen()
+    # Fortgeschrittener Kurs (Gegner): Verteidigungs-Panel rechts und
+    # Ergebnis-Banner oben mittig (reine Anzeige, Logik in gegner.py).
+    gegner.panel_zeichnen(ressourcen_dict, liste_gebaeude,
+                          aktives_regelwerk())
+    gegner.banner_zeichnen()
     menu.menu_zeichnen(gebaeude.GEBAEUDE_TYPEN,
                        ressourcen.GEBAEUDE_WIRTSCHAFT,
                        ressourcen_dict,
@@ -1584,6 +1649,7 @@ def spiel_starten():
     ton.initialisieren()
     ton.musik_starten()
     logistik.initialisieren(fenster)
+    gegner.initialisieren(fenster)
 
     print("Hauptmenü geöffnet. Enter startet ein neues Spiel, L lädt einen Spielstand.")
     print(f"Karte: {KARTE_BREITE} x {KARTE_HOEHE} Kacheln = "
@@ -1625,6 +1691,11 @@ def spiel_starten():
                                                    liste_gebaeude,
                                                    karten_daten)
                 handel.handel_tick(ressourcen_dict, liste_gebaeude)
+                # Fortgeschrittener Kurs (Gegner): Angriffe und Abwehr
+                # laufen als eigener Zustandsautomat nach dem Handel.
+                gegner_ereignis_verarbeiten(
+                    gegner.gegner_tick(ressourcen_dict, liste_gebaeude,
+                                       aktives_regelwerk()))
                 spielstatus_pruefen()
                 missionen_pruefen()
 

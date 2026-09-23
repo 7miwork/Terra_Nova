@@ -1,0 +1,22 @@
+# ── Python: erzeugte Bytecode-Dateien und Caches ───────────────────────────
+# Diese Dateien entstehen beim Ausfuehren automatisch und gehoeren nicht ins Repo.
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Persoenlicher Spielstand ───────────────────────────────────────────────
+# Der Spielstand ist individuell pro Spielerin/Spieler und wird neu erzeugt.
+spielstand.json
+spielstand.json.tmp
+
+# ── Editor-, System- und Hilfsdateien ──────────────────────────────────────
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+# Temporaere Hilfs- und Testskripte aus dem Unterricht (nur lokal noetig)
+Temp/
+
+# ── Virtuelle Umgebungen ───────────────────────────────────────────────────
+.venv/
+venv/

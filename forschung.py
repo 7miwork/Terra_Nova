@@ -146,6 +146,22 @@ TECHNOLOGIEN = [
     {"id": "koloniezentrum", "name": "Koloniezentrum", "kategorie": "Prestige",
      "beschreibung": "Schaltet ein Koloniezentrum frei, das die gesamte Produktion leicht stärkt.", "kosten": 220, "zeit": 50,
      "voraussetzung": "wohnblockbau", "schaltet_gebaeude_frei": 17},
+    # ── Fortgeschrittener Kurs (Gegner): Militär und Verteidigung ────────────
+    # Die neue Kategorie baut auf bestehenden Technologien auf: Militär-
+    # training als Einstieg, danach Schiffbau und Laser. Schutzschilde sind
+    # eine reine Verteidigungsverbesserung ohne eigenes Gebäude.
+    {"id": "militaertraining", "name": "Militärtraining", "kategorie": "Verteidigung",
+     "beschreibung": "Schaltet die Kaserne frei, in der Bürger zu Verteidigern ausgebildet werden.", "kosten": 90, "zeit": 20,
+     "voraussetzung": None, "schaltet_gebaeude_frei": 21},
+    {"id": "raumschiffbau", "name": "Raumschiffbau", "kategorie": "Verteidigung",
+     "beschreibung": "Schaltet die Raumschiffwerft frei, die kampfbereite Schiffe baut.", "kosten": 170, "zeit": 36,
+     "voraussetzungen": ["militaertraining", "stahlverarbeitung"], "schaltet_gebaeude_frei": 22},
+    {"id": "laserverteidigung", "name": "Laserverteidigung", "kategorie": "Verteidigung",
+     "beschreibung": "Schaltet den Laserturm als feste Verteidigungsanlage frei.", "kosten": 130, "zeit": 28,
+     "voraussetzung": "militaertraining", "schaltet_gebaeude_frei": 23},
+    {"id": "schutzschilde", "name": "Schutzschilde", "kategorie": "Verteidigung",
+     "beschreibung": "Energiefelder erhöhen die Verteidigungsstärke der Kolonie um 25 Prozent.", "kosten": 150, "zeit": 32,
+     "voraussetzung": "laserverteidigung", "schaltet_gebaeude_frei": None},
 ]
 
 _fenster = None

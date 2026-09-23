@@ -136,7 +136,7 @@ handel.zustand_importieren({
     "angebot": {"geben": {"holz": 20}, "nehmen": {"stein": 10}, "text": "Holz gegen Stein"},
 })
 achievements.zustand_importieren({"erreicht": ["erste_schritte"], "zaehler": {"gesamt_gebaeude": 1}})
-spielstand.DATEI = os.path.join(tempfile.gettempdir(), "mike_version_test_spielstand.json")
+spielstand.DATEI = os.path.join(tempfile.gettempdir(), "kolonie_test_spielstand.json")
 if os.path.exists(spielstand.DATEI):
     os.remove(spielstand.DATEI)
 erfolg, _ = spielstand.speichern(

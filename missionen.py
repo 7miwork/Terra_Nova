@@ -1,4 +1,4 @@
-"""Missionszentrale der Weltraum-Kolonie.
+"""Missionszentrale von Terra_Nova.
 
 Dieses Modul ist absichtlich einfach aufgebaut. Jede Mission ist nur ein
 Dictionary in der Liste ``MISSIONEN``. Dadurch können Schülerinnen und
@@ -165,6 +165,15 @@ MISSIONEN = [
         "beschreibung": "Baue eine Strasse von der Basis zu einem Gebaeude.",
         "bedingungen": [("gebaeude_typ_9", 1)],
         "belohnung": {"stein": 25},
+    },
+    # Fortgeschrittener Kurs (Gegner): Die Kaserne ist der Einstieg in
+    # die Landesverteidigung.
+    {
+        "id": "kaserne_bauen",
+        "titel": "Kaserne bauen",
+        "beschreibung": "Baue deine erste Kaserne.",
+        "bedingungen": [("gebaeude_typ_21", 1)],
+        "belohnung": {"gold": 80},
     },
 ]
 

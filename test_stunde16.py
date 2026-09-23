@@ -70,7 +70,7 @@ assert "zufriedene_kolonie" in neu
 
 # Die JSON-Speicherung übernimmt den Wert automatisch. Ein alter Zustand ohne
 # dieses Feld wird vom Spielstart später mit 0 ergänzt.
-spielstand.DATEI = os.path.join(tempfile.gettempdir(), "mike_zufriedenheit_test.json")
+spielstand.DATEI = os.path.join(tempfile.gettempdir(), "kolonie_test_zufriedenheit.json")
 if os.path.exists(spielstand.DATEI):
     os.remove(spielstand.DATEI)
 forschung.forschung_zuruecksetzen()

@@ -1,6 +1,6 @@
 """
 ===============================================================================
-MODUL: ton.py  —  Musik und Soundeffekte für das Weltraum-Koloniespiel
+MODUL: ton.py  —  Musik und Soundeffekte für Terra_Nova
 ===============================================================================
 
 Wozu ist dieses Modul da?

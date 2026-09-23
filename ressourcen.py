@@ -34,8 +34,14 @@ RESSOURCEN_NAMEN = {
     "gold": "Gold", "energie": "Energie", "holz": "Holz", "stein": "Stein",
     "bevoelkerung": "Bevoelkerung", "nahrung": "Nahrung", "forschung": "Forschung",
     "kohle": "Kohle", "eisen": "Eisen", "roboter": "Roboter", "stahl": "Stahl",
+    "verteidiger": "Verteidiger", "raumschiffe": "Raumschiffe",
     "zufriedenheit": "Zufriedenheit",
 }
+
+# Fortgeschrittener Kurs (Gegner): Buerger duerfen zu Verteidigern werden,
+# aber hoechstens dieser Anteil der Bevoelkerung darf gleichzeitig
+# Verteidiger sein. Sonst bleibt niemand uebrig, der wirklich arbeitet.
+MAX_VERTEIDIGER_ANTEIL = 0.30
 
 ZUFRIEDENHEIT_MIN = -50.0
 ZUFRIEDENHEIT_MAX = 50.0
@@ -66,12 +72,16 @@ GEBAEUDE_ZUFRIEDENHEIT = {
     18: -2,  # Eisenmine
     19: 6,   # Park: Erholung und Natur
     20: 4,   # Solarreaktor: saubere Energie
+    21: -2,  # Kaserne: Militaer wirkt bedrohlich
+    22: -1,  # Raumschiffwerft: lauter Fabrikbetrieb
+    23: 1,   # Laserturm: Sicherheit und Vertrauen
 }
 
 SPEICHER_BASIS = {
     "gold": 500.0, "energie": 100.0, "holz": 250.0, "stein": 250.0,
     "bevoelkerung": 100.0, "nahrung": 250.0, "forschung": 500.0,
     "kohle": 200.0, "eisen": 200.0, "roboter": 100.0, "stahl": 150.0,
+    "verteidiger": 100.0, "raumschiffe": 50.0,
 }
 
 # Die Liste bleibt parallel zu GEBAEUDE_TYPEN. Die ersten zwölf Einträge
@@ -154,6 +164,27 @@ GEBAEUDE_WIRTSCHAFT = [
     {"baukosten": {"gold": 90, "energie": 10, "stein": 25},
      "produktion": {"energie": 10}, "verbrauch": {}, "personalbedarf": 1, "max_anzahl": 6,
      "freischaltung": None, "grosse_anlage": True},
+    # ── Fortgeschrittener Kurs (Gegner): Verteidigung — Indizes 21 bis 23 ────
+    # Diese drei Typen MUESSEN hinten angehaengt bleiben: Spielstaende
+    # speichern den Typ-Index, kein Umsortieren erlaubt!
+    # 21 Kaserne: bildet Buerger zu Verteidigern aus (Deckel siehe oben).
+    {"baukosten": {"gold": 80, "holz": 30, "stein": 30},
+     "produktion": {"verteidiger": 0.5}, "verbrauch": {"nahrung": 1, "energie": 2},
+     "personalbedarf": 2, "max_anzahl": None,
+     "freischaltung": {"typ": "forschung", "technologie": "militaertraining"},
+     "grosse_anlage": False},
+    # 22 Raumschiffwerft: baut kampfbereite Raumschiffe (je 6 Staerke).
+    {"baukosten": {"gold": 250, "stahl": 30, "energie": 40, "stein": 40},
+     "produktion": {"raumschiffe": 0.2}, "verbrauch": {"energie": 5, "stahl": 1},
+     "personalbedarf": 3, "max_anzahl": 3,
+     "freischaltung": {"typ": "forschung", "technologie": "raumschiffbau"},
+     "grosse_anlage": False},
+    # 23 Laserturm: feste Verteidigung, solange er arbeitet.
+    {"baukosten": {"gold": 120, "stahl": 15, "energie": 20},
+     "produktion": {}, "verbrauch": {"energie": 3},
+     "personalbedarf": 1, "max_anzahl": 10,
+     "freischaltung": {"typ": "forschung", "technologie": "laserverteidigung"},
+     "grosse_anlage": False},
 ]
 
 
@@ -161,7 +192,7 @@ _GEBAEUDE_NAMEN = [
     "Basis", "Reaktor", "Farm", "Holzfaeller", "Steinmetz", "Marktplatz", "Wohnhaus",
     "Universitaet", "Mine", "Strasse", "Fusionsreaktor", "Roboterfabrik", "Stahlwerk",
     "Gewaechshaus", "Lagerhaus", "Wohnblock", "Handelsposten", "Koloniezentrum", "Eisenmine",
-    "Park", "Solarreaktor",
+    "Park", "Solarreaktor", "Kaserne", "Raumschiffwerft", "Laserturm",
 ]
 
 
@@ -319,8 +350,21 @@ def personalbedarf(typ_index):
     return bedarf
 
 
+def verteidiger_kontingent(ressourcen_dict):
+    """Höchste erlaubte Anzahl Verteidiger (MAX_VERTEIDIGER_ANTEIL × Bevölkerung).
+
+    Verteidiger bleiben Bewohner — aber nur ein Teil der Kolonie darf
+    gleichzeitig zum Militär gehen, sonst fehlen Arbeitskräfte überall.
+    """
+    return int(ressourcen_dict.get("bevoelkerung", 0) * MAX_VERTEIDIGER_ANTEIL)
+
+
 def personal_info(ressourcen_dict, liste_gebaeude):
     verfuegbar = int(ressourcen_dict.get("bevoelkerung", 0) + ressourcen_dict.get("roboter", 0))
+    # Fortgeschrittener Kurs (Gegner): Verteidiger sind Bewohner, die
+    # nicht mehr als Arbeitskraefte zur Verfuegung stehen. Fuer die
+    # Anzeige im HUD gilt derselbe Abzug wie im Wirtschaftstick.
+    verfuegbar = max(0, verfuegbar - int(ressourcen_dict.get("verteidiger", 0)))
     # Fortgeschrittener Kurs (Logistik): Gebaeude ohne Strassenanbindung
     # stehen still und brauchen deshalb kein Personal.
     bedarf = sum(personalbedarf(g["typ"]) for g in liste_gebaeude
@@ -414,6 +458,14 @@ def ressourcen_produzieren(ressourcen_dict, liste_gebaeude, karten_daten=None):
     ressourcen_dict["nahrung"] = max(0.0, ressourcen_dict.get("nahrung", 0) - nahrungsverbrauch)
 
     verfuegbares_personal = int(ressourcen_dict.get("bevoelkerung", 0) + ressourcen_dict.get("roboter", 0))
+    # Fortgeschrittener Kurs (Gegner): Verteidiger sind weiterhin Bewohner
+    # (sie essen mit, sie zaehlen zur Bevoelkerung), aber sie dienen dem
+    # Militaer und stehen als Arbeitskraefte nicht mehr zur Verfuegung.
+    # Deshalb werden sie hier vom verfuegbaren Personal abgezogen —
+    # mindestens 0, damit ein negatives Personal nicht moeglich ist.
+    # Das ist der Zielkonflikt: Jede Kaserne schwaecht die Wirtschaft.
+    verfuegbares_personal = max(
+        0, verfuegbares_personal - int(ressourcen_dict.get("verteidiger", 0)))
     aktive_labore = 0
     for gebaeude in liste_gebaeude:
         typ_index = gebaeude["typ"]
@@ -451,6 +503,13 @@ def ressourcen_produzieren(ressourcen_dict, liste_gebaeude, karten_daten=None):
             verbrauch["energie"] = max(0, verbrauch.get("energie", 0) - 1)
         if forschung.ist_technologie_erforscht("mini_reaktor") and wirtschaft.get("grosse_anlage") and typ_index != 1:
             produktion["energie"] = produktion.get("energie", 0) + 1
+        # Fortgeschrittener Kurs (Gegner): Die Kaserne bildet Verteidiger
+        # aus, aber es duerfen nie mehr als MAX_VERTEIDIGER_ANTEIL der
+        # Bevoelkerung gleichzeitig Verteidiger sein. Hat die Kolonie das
+        # Kontingent erreicht, produziert die Kaserne bis auf Weiteres
+        # nichts mehr (sie verbraucht aber weiter Nahrung und Energie).
+        if typ_index == 21 and ressourcen_dict.get("verteidiger", 0) >= verteidiger_kontingent(ressourcen_dict):
+            produktion.pop("verteidiger", None)
 
         if any(not _hat_genug(ressourcen_dict, name, menge) for name, menge in verbrauch.items()):
             gebaeude["arbeitet"] = False

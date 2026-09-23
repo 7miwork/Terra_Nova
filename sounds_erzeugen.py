@@ -1,6 +1,6 @@
 """
 ===============================================================================
-SKRIPT: sounds_erzeugen.py  —  Weltraum-Koloniespiel (Fortgeschrittener Kurs)
+SKRIPT: sounds_erzeugen.py  —  Terra_Nova (Fortgeschrittener Kurs)
 ===============================================================================
 
 Wozu ist dieses Skript da?

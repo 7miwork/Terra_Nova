@@ -2,7 +2,7 @@
 
 ## 1. Was ist neu?
 
-Die Weltraum-Kolonie besitzt jetzt eine **Missionszentrale**. Dort stehen zusätzliche Aufgaben, die während des Spiels erledigt werden können. Missionen sind keine Pflicht-Siegbedingungen. Deshalb kann man auch im freien Spiel Missionen erledigen und Belohnungen sammeln.
+Terra_Nova besitzt jetzt eine **Missionszentrale**. Dort stehen zusätzliche Aufgaben, die während des Spiels erledigt werden können. Missionen sind keine Pflicht-Siegbedingungen. Deshalb kann man auch im freien Spiel Missionen erledigen und Belohnungen sammeln.
 
 Eine Mission besteht immer aus drei Teilen:
 

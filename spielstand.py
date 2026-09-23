@@ -10,6 +10,7 @@ import ressourcen
 import logistik
 import achievements
 import missionen
+import gegner
 
 
 DATEI = os.path.join(os.path.dirname(__file__), "spielstand.json")
@@ -65,6 +66,7 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
         "wirtschaft": ressourcen.zustand_exportieren(),
         "achievements": achievements.zustand_exportieren(),
         "missionen": missionen.zustand_exportieren(),
+        "gegner": gegner.zustand_exportieren(),
     }
     try:
         temporaer = DATEI + ".tmp"
@@ -101,6 +103,9 @@ def laden():
             achievements.zustand_importieren(daten.get("achievements", {}))
         if "missionen" in daten:
             missionen.zustand_importieren(daten.get("missionen", {}))
+        # Fortgeschrittener Kurs (Gegner): Alte Spielstaende ohne das
+        # Feld "gegner" landen hier mit {} = frischer Friedenszeit.
+        gegner.zustand_importieren(daten.get("gegner", {}))
     except (OSError, json.JSONDecodeError, TypeError, ValueError) as fehler:
         return None, f"Laden fehlgeschlagen: {fehler}"
     return daten, "Spielstand geladen."

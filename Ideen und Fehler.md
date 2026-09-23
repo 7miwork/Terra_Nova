@@ -19,3 +19,50 @@ Die Bildungs-Idee wurde als Universität umgesetzt. Die Universität verwendet d
 Die Mine erzeugt Kohle und regelmäßig Eisen. Das Stahlwerk verarbeitet Eisen und Kohle zu Stahl. Straßen sind als eigenes Gebäude vorhanden. Zusätzliche Ideen wie Gewächshaus, Lagerhaus, Wohnblock, Handelsposten und Koloniezentrum sind ebenfalls als Gebäude mit eigenen Bildern, Wirtschaftsdaten und Forschungsfreischaltungen eingebaut.
 
 Die frühere feste Tastaturbelegung wurde durch Kategorien ersetzt. So können neue Schülerideen ergänzt werden, ohne jedes Gebäude auf eine neue feste Ziffer legen zu müssen. Die genauen Regeln stehen in `STUNDE11_DESIGN.md`.
+
+## Umsetzungsstand Phase 4: Gegner und Verteidigung
+
+Die Schülerwunschliste „Gegner/Verteidigung“ ist als Modul `gegner.py` eingebaut:
+
+- Ein Zustandsautomat fährt jede Kolonie durch **Frieden (150 Ticks Start,
+  danach 100–160) → Warnung (25 Ticks) → Gefecht**. Die Warnung spielt die
+  Sirene und zeigt im Verteidigungs-Panel rechts Angriffsstärke und Countdown;
+  nach dem Gefecht steht 6 Sekunden das Ergebnis-Banner mittig.
+- **Abwehr** zahlt 40 + 20 × Welle Gold und 10 × Welle Forschung, kostet aber
+  20 % der Verteidiger und Raumschiffe (auch wenn nichts passiert ist).
+- **Niederlage** nimmt 30 % von acht Rohstoffen mit (Gold, Energie, Holz,
+  Stein, Nahrung, Kohle, Eisen, Stahl). Bevölkerung, Forschung, Roboter,
+  Zufriedenheit, Verteidiger und Raumschiffe sind ausdrücklich geschützt —
+  Plünderung allein führt nie zu Game Over.
+- Neue Gebäude: **Kaserne (21)** bildet Verteidiger aus (max. 30 % der
+  Bevölkerung), **Raumschiffwerft (22)** baut Schiffe (je 6 Stärke),
+  **Laserturm (23)** verteidigt mit 10 Stärke, solange er arbeitet.
+- Neue Forschungen: Militärtraining, Raumschiffbau, Laserverteidigung,
+  Schutzschilde (+25 % Verteidigung). Kategorie 9 heißt jetzt
+  „Spezial / Verteidigung“.
+- Die Regelwerke tragen die Felder `gegner_aktiv`/`gegner_faktor`:
+  Entspannt und Freies Spiel sind ohne Angriffe, Überleben rechnet mit 1.3.
+- Drei Achievements („Erste Abwehr“, „Festung“, „Flotte“) und die Mission
+  „Kaserne bauen“ belohnen den Einstieg. Alte Spielstände laden weiterhin.
+
+## Bekannte Fehlerquellen aus dieser Phase (zum Nachschlagen)
+
+1. **`UnboundLocalError` in Modulvariablen**: Wer in einer Funktion eine
+   Modulvariable nur liest, braucht kein `global`; wer sie *schreibt*, braucht
+   es — auch wenn nur bedingt geschrieben wird (`_banner` in `gegner.py`).
+2. **Neues Achievement vergessen**: In `achievements.pruefen()` gibt es ein
+   festes `bedingungen`-Dict. Ein neuer Eintrag in `ACHIEVEMENTS` wird ohne
+   passende Zeile dort nie erreicht — der Test bricht mit „nicht in neue“.
+3. **`main.py` und gemischte Zeilenenden**: Mehrzeilige Ersetzungen schlagen
+   fehl, wenn eine Zeile CRLF und die andere LF hat. Workaround: einzeilige
+   Anker nehmen oder ein Python-Patchskript mit `\\r?\\n` schreiben.
+4. **Werte im Test raten**: Die Kaserne produziert 0.5 Verteidiger pro Tick —
+   Wer im Test 0.05 erwartet, bekommt einen sonderbaren Fehler. Immer in
+   `ressourcen.GEBAEUDE_WIRTSCHAFT` nachschauen statt aus dem Gedächtnis.
+
+## Offene Ideen zum Gegnersystem (noch nicht umgesetzt)
+
+- David/Julian: Hier kommt eure nächste Idee hin (z. B. unterschiedliche
+  Gegnerflotten, Reparatur geplünderter Lager, eigene Gegner-Skripte).
+  Beschreibt zuerst die Regel, dann die Formel, dann den Testfall.
+

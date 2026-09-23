@@ -1,4 +1,4 @@
-"""Achievement-System für die Weltraum-Kolonie.
+"""Achievement-System für Terra_Nova.
 
 Die Achievements sind bewusst unabhängig von Pygame-Spielmechanik gehalten:
 Das Spiel meldet Gebäude- und Handelsereignisse, während dieses Modul nur
@@ -41,6 +41,10 @@ ACHIEVEMENTS = [
     # Fortgeschrittener Kurs (Logistik): Strassen bauen und alles anbinden.
     {"id": "strassenbauer", "titel": "Strassenbauer", "beschreibung": "Baue insgesamt 10 Strassen.", "punkte": 25, "fortschritt": "strassen", "ziel": 10},
     {"id": "gut_vernetzt", "titel": "Gut vernetzt", "beschreibung": "Stehe mit mindestens 10 Gebaeuden und ohne offene Anbindung da.", "punkte": 40, "fortschritt": "vernetzt", "ziel": 1},
+    # Fortgeschrittener Kurs (Gegner): Militär-Erfolge.
+    {"id": "erste_abwehr", "titel": "Erste Abwehr", "beschreibung": "Wehre den ersten Angriff ab.", "punkte": 30, "fortschritt": "abgewehrt", "ziel": 1},
+    {"id": "festung", "titel": "Festung", "beschreibung": "Halte vier Lasertürme gleichzeitig.", "punkte": 50, "fortschritt": "typ_23", "ziel": 4},
+    {"id": "flotte", "titel": "Flotte", "beschreibung": "Stelle 5 Raumschiffe gleichzeitig.", "punkte": 60, "fortschritt": "raumschiffe", "ziel": 5},
 ]
 
 _fenster = None
@@ -104,6 +108,11 @@ def terraformierung():
     _zaehler["fruchtbare_kacheln"] = _zaehler.get("fruchtbare_kacheln", 0) + 1
 
 
+def angriff_abgewehrt():
+    """Ein feindlicher Angriff wurde abgewehrt (Zähler „Erste Abwehr“)."""
+    _zaehler["abgewehrt"] = _zaehler.get("abgewehrt", 0) + 1
+
+
 def _kontext(ressourcen_dict, liste_gebaeude, karten_daten,
              forschungen=0, wirtschafts_ticks=0, spielstatus="spiel",
              speicher_max=None):
@@ -117,6 +126,8 @@ def _kontext(ressourcen_dict, liste_gebaeude, karten_daten,
     zaehler["gold"] = float(ressourcen_dict.get("gold", 0))
     zaehler["energie"] = float(ressourcen_dict.get("energie", 0))
     zaehler["roboter"] = float(ressourcen_dict.get("roboter", 0))
+    # Fortgeschrittener Kurs (Gegner): Raumschiffe für das „Flotte“-Achievement.
+    zaehler["raumschiffe"] = float(ressourcen_dict.get("raumschiffe", 0))
     zaehler["zufriedenheit"] = float(ressourcen_dict.get("zufriedenheit", 0))
     zaehler["nachhaltigkeit"] = int(ressourcen_dict.get("nahrung", 0) >= 100 and
                                       ressourcen_dict.get("energie", 0) >= 100)
@@ -183,6 +194,10 @@ def pruefen(ressourcen_dict, liste_gebaeude, karten_daten,
         "zufriedene_kolonie": _zaehler.get("zufriedenheit", 0) >= 30,
         "strassenbauer": _zaehler.get("strassen", 0) >= 10,
         "gut_vernetzt": _zaehler.get("vernetzt", 0) >= 1,
+        # Fortgeschrittener Kurs (Gegner): Militärziele.
+        "erste_abwehr": _zaehler.get("abgewehrt", 0) >= 1,
+        "festung": _zaehler.get("typ_23", 0) >= 4,
+        "flotte": _zaehler.get("raumschiffe", 0) >= 5,
         "zielmeister": _zaehler.get("sieg", 0) >= 1,
         "perfekte_runde": (_zaehler.get("sieg", 0) >= 1 and
                             len(_erreicht) >= 10),
