@@ -29,6 +29,7 @@ gebaut ist, was du in Phase 4 veränderst und wie du dich selbst testest.
 | `gegner.py` | **NEU:** Angriffs-Automat, Stärke, Beute, Panel, Banner |
 | `ton.py` | Alle Sounds und die Musik (ohne Gerät: stiller No-Op) |
 | `logistik.py` | Straßennetz und Anbindung (Phase 3) |
+| `panel.py` | **Schwebende Info-Fenster**: verschieben, minimieren, ausblenden |
 | `achievements.py` / `missionen.py` | Zähler, Ziele, Belohnungen |
 | `spielstand.py` | Speichern/Laden als lesbares JSON |
 
@@ -117,7 +118,38 @@ Der Zufall steckt in einer **eigenen** `random.Random`-Instanz.
 `gegner.seed_setzen(7)` macht jeden Ablauf exakt reproduzierbar — so
 schreibst du Tests, die morgen noch grün sind.
 
-## 4. Checkliste: Ich baue eine eigene Erweiterung
+## 4. Fenster verschieben und minimieren (`panel.py`)
+
+Auf dem Screenshot haben sich die Info-Kästen gegenseitig und die
+Ressourcenleiste verdeckt. Deshalb gibt es jetzt ein Modul für schwebende
+Fenster:
+
+| Aktion | So geht's |
+|---|---|
+| Verschieben | linke Maustaste auf die **Titelzeile**, dann ziehen |
+| Minimieren | Knopf **–** in der Titelzeile (wird zu **+**) |
+| Ausblenden | Knopf **X**; die Taste des Fensters holt es zurück |
+| Anordnen | **L** setzt alle Fenster auf die Standardpositionen |
+
+Fenster und Tasten: `Übersicht (I)`, `Verteidigung (S)`, `Ziel (O)`,
+`Bauinfo (C)`.
+
+Beim Zeichnen ruft jedes Modul nur eine Funktion auf:
+
+    panel.zeichnen(schluessel, titel, breite, hoehe, inhalt_funktion,
+                   standard_x=..., standard_y=..., akzent=farbe)
+
+`inhalt_funktion(x, y, breite, hoehe)` malt den Inhalt — sie bekommt die
+linke obere Ecke **unter** der Titelzeile. So bleibt die Logik im Modul
+(hud/gegner/main) und `panel.py` kümmert sich nur um Rahmen, Titelzeile,
+Knöpfe, Ziehen und Klemmen am Bildrand.
+
+Ebenfalls neu: Die Ressourcenleiste rechnet ihr Layout selbst
+(`hud.ressourcen_leiste_layout`). Sie wählt die größte Schrift, bei der
+jeder Wert in seine Spalte passt — vorher war die Spaltenbreite fest (162
+Pixel) und „Bevoelkerung: 24/100“ lief in die Nachbarspalte.
+
+## 5. Checkliste: Ich baue eine eigene Erweiterung
 
 ### Neues Gebäude (z. B. „Luftfilter“)
 
@@ -159,6 +191,13 @@ schreibst du Tests, die morgen noch grün sind.
    (CRLF/LF). Einzeiliger Anker oder Patchskript mit `\\r?\\n` nutzen.
 4. Test-Assert auf „0.05 Verteidiger pro Tick“ — der echte Wert steht in
    `ressourcen.GEBAEUDE_WIRTSCHAFT[21]` und lautet **0.5**.
+5. Feste Spaltenbreite in der HUD-Leiste: Bei langen Zahlen („Bevoelkerung:
+   24/100“) schob sich der Text in die Nachbarspalte. Lösung: Layout
+   berechnen lassen (`hud.ressourcen_leiste_layout`) statt feste Pixelwerte.
+6. Ausgeblendetes Fenster blieb Trefferzone: Die Merkliste der Fenster muss
+   zu Beginn jedes Frames geleert werden (`panel.frame_start()`), sonst
+   verbraucht ein unsichtbares Fenster weiter Mausklicks und man kann dort
+   keine Gebäude mehr bauen.
 
 Weitere typische Stellen: `setdefault` für neue Ressourcen beim Laden alter
 Spielstände (`main.spielstand_laden`) und `.get(..., 0)` in jeder Auswertung

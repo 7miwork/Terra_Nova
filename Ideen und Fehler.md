@@ -60,6 +60,31 @@ Die Schülerwunschliste „Gegner/Verteidigung“ ist als Modul `gegner.py` eing
    Wer im Test 0.05 erwartet, bekommt einen sonderbaren Fehler. Immer in
    `ressourcen.GEBAEUDE_WIRTSCHAFT` nachschauen statt aus dem Gedächtnis.
 
+## Umsetzungsstand: Oberfläche aufgeräumt (schwebende Fenster)
+
+Die Überlappungen aus dem Screenshot sind behoben:
+
+- **`panel.py` (neu):** Alle Info-Kästen sind schwebende Fenster — an der
+  Titelzeile verschiebbar, mit **–** minimierbar, mit **X** ausblendbar,
+  immer im Bild geklemmt. Tasten: **S** Verteidigung, **C** Bauinfo,
+  **I** Übersicht, **O** Ziel, **L** Layout zurücksetzen.
+- **Ressourcenleiste:** berechnet Spalten und Schriftgröße selbst
+  (`hud.ressourcen_leiste_layout`). Vorher: feste 162-Pixel-Spalten, dadurch
+  lief „Bevoelkerung: 24/100“ in „Nahrung“ hinein und „Zufriedenheit“ wurde
+  am Rand abgeschnitten.
+- **Ziel-Fenster:** lag früher fest im HUD-Balken (y=54) und verdeckte die
+  Ressourcen; jetzt ein Panel unterhalb des HUD (Standardposition 762/248).
+- **Übersicht:** Kamera-, Karten-, Boden- und Personal-Texte sind aus dem
+  Kartenbild in ein Fenster gewandert (links oben).
+- **Klicks:** Ein Klick in ein Fenster wird verbraucht — man baut nie
+  versehentlich ein Gebäude unter einem Panel.
+- **Test:** `test_fortgeschritten_panels.py` prüft Anordnung, Ziehen,
+  Klemmen, Minimieren, Schließen, Klicken und das Leisten-Layout.
+  Zusätzlich `Temp/vorschau.py` rendert ein PNG zur Sichtprüfung.
+
+**Offene Idee für euch:** Fenster-Transparenz einstellbar machen oder
+Fensterinhalte per Rechtsklick umschalten (z. B. Übersicht → nur Personal).
+
 ## Offene Ideen zum Gegnersystem (noch nicht umgesetzt)
 
 - David/Julian: Hier kommt eure nächste Idee hin (z. B. unterschiedliche

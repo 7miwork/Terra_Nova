@@ -94,4 +94,29 @@ assert len(missionen.MISSIONEN) <= 24         # Anzeige: 3 Spalten a 8 Zeilen
 print(f"  {len(achievements.ACHIEVEMENTS)} Achievements, "
       f"{len(missionen.MISSIONEN)} Missionen — passen ins Menü")
 
+print('\n=== SCHWEBENDE FENSTER UND HUD ===')
+import hud
+import panel
+for _name in ("frame_start", "zeichnen", "maus_ereignis", "panel_rect",
+              "titel_rect", "knopf_rechtecke", "umschalten", "verschieben",
+              "minimieren_setzen", "zustand_zuruecksetzen"):
+    assert hasattr(panel, _name), f"panel.{_name} fehlt"
+assert panel.TITEL_HOEHE == 22 and panel.RAND_FENSTER == 4
+assert hud.HUD_HOEHE == 82 and hud._RESSOURCEN_SPALTEN == 6
+assert hasattr(hud, "ressourcen_leiste_layout") and hasattr(hud, "_letztes_layout")
+# Verdrahtung: jedes Fenster zeichnet genau ein Modul, alle Mauspfade sind da
+_quellen = {}
+for _datei in ("main.py", "hud.py", "gegner.py"):
+    with open(os.path.join(os.path.dirname(__file__), _datei), encoding="utf-8") as _f:
+        _quellen[_datei] = _f.read()
+for _datei, _muss in (("hud.py", 'panel.zeichnen("uebersicht"'),
+                      ("hud.py", 'panel.zeichnen("bauinfo"'),
+                      ("gegner.py", 'panel.zeichnen("verteidigung"'),
+                      ("main.py", 'panel.zeichnen("ziel"'),
+                      ("main.py", "panel.frame_start()"),
+                      ("main.py", "panel.maus_ereignis(ereignis)"),
+                      ("main.py", "panels_anordnen()")):
+    assert _muss in _quellen[_datei], f"{_datei}: {_muss}"
+print("  OK 4 Fenster, Maus-/Klick-Pfad und Leisten-Layout verdrahtet")
+
 print('\nCHECK_OK')

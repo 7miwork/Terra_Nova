@@ -51,6 +51,8 @@ Stunde 9 — NEU dazu:
 
 import pygame
 
+import panel    # schwebende Info-Fenster (Fortgeschrittener Kurs)
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # BLOCK: MODUL-VARIABLEN
@@ -61,6 +63,16 @@ import pygame
 
 _fenster = None   # Das Pygame-Fenster (wird von main.py übergeben)
 _font_cache = {}
+
+# Hoehe des HUD-Balkens. Die schwebenden Panels richten ihre
+# Standardposition danach aus, damit sich nichts ueberdeckt.
+HUD_HOEHE = 82
+# Anzahl der Spalten in der Ressourcenleiste (12 Werte -> 2 Reihen).
+_RESSOURCEN_SPALTEN = 6
+# Merkt sich die zuletzt benoetigte Balkenhoehe (fuer den Tooltip).
+_letzte_balkenhoehe = HUD_HOEHE
+# Merkt sich das zuletzt berechnete Layout (fuer Tests und Fehlersuche).
+_letztes_layout = None
 
 
 def _font(groesse):
@@ -132,6 +144,67 @@ def meldung_anzeigen(text):
     #
     # Neu in Stunde 7: Fünfter Rohstoff "Bevölkerung" (rosa) kommt dazu!
 # ═════════════════════════════════════════════════════════════════════════════
+
+def ressourcen_leiste_layout(anzeige, ressourcen, ressourcen_limits=None,
+                             fenster_breite=None):
+    """Berechnet Schriftgroesse und Positionen der Ressourcen-Leiste.
+
+    Reine Rechnung ohne Zeichnen — dadurch in Tests direkt pruefbar.
+    Gewaehlt wird die groesste Schrift, bei der JEDER Wert in seine
+    Spalte passt. So koennen sich die Eintraege nicht mehr ueberlappen,
+    egal wie lang die Zahlen (z.B. 100/500) gerade sind.
+
+    Rueckgabe: {"schriftgroesse", "spaltenbreite", "balkenhoehe",
+               "eintraege"} mit icon_pos/text_pos/text je Ressource.
+    """
+    breite = fenster_breite or (_fenster.get_width() if _fenster else 1000)
+    spalten = _RESSOURCEN_SPALTEN
+    rand = 14
+    spaltenbreite = max(84, (breite - 2 * rand) // spalten)
+
+    # 1) Anzeige-Texte bauen (Wert, Speicherlimit, Zufriedenheit mit +/-)
+    texte = []
+    for res in anzeige:
+        wert = ressourcen.get(res["schluessel"], 0)
+        if res["schluessel"] == "zufriedenheit":
+            wert_anzeige = f"{float(wert):+.0f}"
+        else:
+            wert_anzeige = (f"{wert:.0f}" if isinstance(wert, float)
+                            else str(wert))
+        if ressourcen_limits and res["schluessel"] in ressourcen_limits:
+            wert_anzeige += f"/{ressourcen_limits[res['schluessel']]:.0f}"
+        texte.append(f"{res['name']}: {wert_anzeige}")
+
+    # 2) Groesste Schrift suchen, bei der alles in die Spalte passt
+    schriftgroesse = 16
+    for kandidat in (24, 22, 20, 18, 16):
+        schrift = _font(kandidat)
+        if not texte:
+            schriftgroesse = kandidat
+            break
+        if max(schrift.size(t)[0] for t in texte) <= spaltenbreite - 22:
+            schriftgroesse = kandidat
+            break
+
+    # 3) Positionen: Icon links, Text daneben — in Spalten und Reihen
+    zeilen_hoehe = schriftgroesse + 8
+    zeilen_anzahl = max(1, (len(texte) + spalten - 1) // spalten)
+    eintraege = []
+    for index, text in enumerate(texte):
+        spalte = index % spalten
+        zeile = index // spalten
+        icon_x = rand + spalte * spaltenbreite
+        icon_y = 14 + zeile * zeilen_hoehe
+        eintraege.append({"icon_pos": (icon_x, icon_y),
+                          "text_pos": (icon_x + 15, icon_y - 3),
+                          "text": text})
+
+    balkenhoehe = max(HUD_HOEHE, 14 + zeilen_anzahl * zeilen_hoehe + 10)
+    return {"schriftgroesse": schriftgroesse,
+            "spaltenbreite": spaltenbreite,
+            "balkenhoehe": balkenhoehe,
+            "eintraege": eintraege}
+
 
 def _ressourcen_leiste_zeichnen(ressourcen, maus_pos=None, gebaeude_wirtschaft=None,
                                  ressourcen_limits=None):
@@ -271,22 +344,27 @@ def _ressourcen_leiste_zeichnen(ressourcen, maus_pos=None, gebaeude_wirtschaft=N
 
     ]
 
-    # Elf Ressourcen werden auf sechs Spalten und zwei Reihen verteilt.
-    # So bleibt auch Stahl im 1000-Pixel-Fenster lesbar.
-    for index, res in enumerate(ressourcen_typen):
-        if index < 6:
-            spalte, zeile = index, 0
-        else:
-            spalte, zeile = index - 6, 1
-        x = 18 + spalte * 162
-        y = 15 + zeile * 32
-        res["icon_pos"] = (x, y)
-        res["text_pos"] = (x + 15, y - 3)
+    # ── Positionen und Schriftgroesse automatisch berechnen ─────────────
+    # Frueher war die Spaltenbreite fest (162 Pixel). Lange Namen wie
+    # "Bevoelkerung: 10/100" liefen in die naechste Spalte und
+    # "Zufriedenheit" wurde am rechten Rand abgeschnitten. Jetzt
+    # berechnet ressourcen_leiste_layout() alles aus der Fensterbreite.
+    global _letzte_balkenhoehe, _letztes_layout
+    layout = ressourcen_leiste_layout(ressourcen_typen, ressourcen,
+                                      ressourcen_limits)
+    schrift = _font(layout["schriftgroesse"])
+    _letzte_balkenhoehe = layout["balkenhoehe"]
+    _letztes_layout = layout
+    for res, eintrag in zip(ressourcen_typen, layout["eintraege"]):
+        res["icon_pos"] = eintrag["icon_pos"]
+        res["text_pos"] = eintrag["text_pos"]
+        res["text"] = eintrag["text"]
     
     # ── Hintergrund für die Leiste zeichnen ──────────────────────────────
 
     # Dunkler Balken oben über die volle Breite
-    hintergrund_hoehe = 82
+    # Hoehe kommt aus dem Layout (so wachsen Balken und Panels mit)
+    hintergrund_hoehe = layout["balkenhoehe"]
 
     hintergrund_rect = pygame.Rect(0, 0, _fenster.get_width(), hintergrund_hoehe)
     pygame.draw.rect(_fenster, (20, 20, 30), hintergrund_rect)   # Dunkelblau-Schwarz
@@ -298,19 +376,10 @@ def _ressourcen_leiste_zeichnen(ressourcen, maus_pos=None, gebaeude_wirtschaft=N
         pygame.draw.circle(_fenster, res["farbe"], res["icon_pos"], 10)
         pygame.draw.circle(_fenster, (255, 255, 255), res["icon_pos"], 10, 1)   # Weißer Rahmen
         
-        # Wert aus dem Dictionary lesen
-        wert = ressourcen.get(res["schluessel"], 0)
-        
-        # Zufriedenheit ist die einzige Ressource, die auch negativ werden
-        # darf. Das Pluszeichen macht positive Werte direkt erkennbar.
-        if res["schluessel"] == "zufriedenheit":
-            wert_anzeige = f"{float(wert):+.0f}"
-        else:
-            wert_anzeige = f"{wert:.0f}" if isinstance(wert, float) else str(wert)
-
-        if ressourcen_limits and res["schluessel"] in ressourcen_limits:
-            wert_anzeige += f"/{ressourcen_limits[res['schluessel']]:.0f}"
-        text = schrift.render(f"{res['name']}: {wert_anzeige}", True, (255, 255, 255))
+        # Der Anzeige-Text wurde schon in ressourcen_leiste_layout()
+        # gebaut (mit Wert und Speicherlimit) und passt garantiert in
+        # die Spalte.
+        text = schrift.render(res["text"], True, (255, 255, 255))
 
         _fenster.blit(text, res["text_pos"])
 
@@ -398,7 +467,12 @@ def _ressourcen_tooltip_zeichnen(res, icon_x, icon_y, gebaeude_wirtschaft):
 
     # Box unter dem Icon platzieren (kleiner Abstand 5 Pixel)
     box_x = icon_x - box_breite // 2
-    box_y = icon_y + 17
+    # In der zweiten Reihe wuerde der Tooltip sonst ueber den Zahlen
+    # der ersten Reihe liegen. Deshalb dort unter dem Balken zeichnen.
+    if icon_y > 40:
+        box_y = _letzte_balkenhoehe + 6
+    else:
+        box_y = icon_y + 17
 
     # Damit die Box nicht über den rechten Bildschirmrand ragt
     if box_x < 0:
@@ -500,13 +574,14 @@ def _gebaeude_auswahl_zeichnen(gebaeude_auswahl, gebaeude_typen,
     
     # ── Haupt-Text erstellen: "Ausgewählt: Reaktor (Taste 2)" ──────────
     taste = gebaeude_daten.get("taste", str(gebaeude_auswahl + 1))
+    taste_teil = f", Taste {taste}" if taste else ""   # ohne Hotkey weglassen
     breite = gebaeude_daten.get("breite", 1)
     hoehe = gebaeude_daten.get("hoehe", 1)
     if kategorie_name:
         text_string = (f"{kategorie_name} [{kategorie_position + 1}] | "
-                       f"Ausgewaehlt: {name} ({breite}x{hoehe} Kacheln, Taste {taste})")
+                       f"Ausgewaehlt: {name} ({breite}x{hoehe} Kacheln{taste_teil})")
     else:
-        text_string = f"Ausgewaehlt: {name} ({breite}x{hoehe} Kacheln, Taste {taste})"
+        text_string = f"Ausgewaehlt: {name} ({breite}x{hoehe} Kacheln{taste_teil})"
 
     text = schrift.render(text_string, True, (255, 255, 255))
     
@@ -552,71 +627,51 @@ def _gebaeude_auswahl_zeichnen(gebaeude_auswahl, gebaeude_typen,
     produktion_surface = schrift_klein.render(produktion_text, True, (120, 220, 120))
     verbrauch_surface  = schrift_klein.render(verbrauch_text, True, (220, 120, 120))
 
-    # ── Breite des Hintergrunds an den breiteren Text anpassen ───────────
-
-    # (entweder Haupttext oder Kosten-Text, je nachdem was breiter ist)
+    # ── Fenstergroesse aus den Texten berechnen ─────────────────────────
+    # Die Bauinfo ist jetzt ein schwebendes Panel: Sie kann mit der Maus
+    # verschoben und ueber den "-"-Knopf (oder Taste C) minimiert werden.
     maximal_breite = max(text.get_width(), kosten_text.get_width(),
-                         produktion_surface.get_width(), verbrauch_surface.get_width(),
+                         produktion_surface.get_width(),
+                         verbrauch_surface.get_width(),
                          personal_surface.get_width())
+    padding = 10
+    inhalt_breite = maximal_breite + 2 * padding + 58   # 58 = Bildvorschau
+    inhalt_hoehe = 112                                  # fuenf Zeilen
+    bauinfo_breite = inhalt_breite + 2 * panel.RAND_INNEN
+    bauinfo_hoehe = (panel.TITEL_HOEHE + inhalt_hoehe
+                     + 2 * panel.RAND_INNEN)
 
-    hintergrund_padding = 10
-    
-    # Position: Mitte unten am Bildschirm
-    mitte_x = _fenster.get_width() // 2
-    
-    # Hintergrund-Rechteck (breit genug für alle Texte)
-    hintergrund_breite = maximal_breite + 2 * hintergrund_padding + 58  # Platz für Bildvorschau
+    def inhalt(x0, y0, b, h):
+        """Malt Baukosten, Produktion, Verbrauch, Personal und Bild."""
+        text_x = x0 + padding + 50        # Platz fuer die Bildvorschau
+        _fenster.blit(text, (text_x, y0 + 2))
+        _fenster.blit(kosten_text, (text_x, y0 + 26))
+        _fenster.blit(produktion_surface, (text_x, y0 + 48))
+        _fenster.blit(verbrauch_surface, (text_x, y0 + 70))
+        _fenster.blit(personal_surface, (text_x, y0 + 92))
 
-    # NEU in Stunde 9: Höher, weil jetzt 4 Zeilen drinstehen:
-    # Haupttext + Kosten + Produktion + Verbrauch
-    hintergrund_hoehe = 152
-    hintergrund_y = _fenster.get_height() - 160
+        # Bildvorschau links — so sieht man sofort das gewaehlte Gebaeude
+        icon_groesse = 42
+        icon_rect = pygame.Rect(x0 + padding,
+                                y0 + (h - icon_groesse) // 2,
+                                icon_groesse, icon_groesse)
+        bild = (bild_funktion(gebaeude_auswahl, (icon_groesse, icon_groesse))
+                if bild_funktion else None)
+        if bild is not None:
+            _fenster.blit(bild, icon_rect)
+        else:
+            pygame.draw.rect(_fenster, farbe, icon_rect)
+            kuerzel_text = schrift_klein.render(kuerzel, True, (20, 20, 20))
+            _fenster.blit(kuerzel_text,
+                          kuerzel_text.get_rect(center=icon_rect.center))
+        pygame.draw.rect(_fenster, (255, 255, 255), icon_rect, 1)
 
-    hintergrund_x = mitte_x - hintergrund_breite // 2
-    
-    hintergrund_rect = pygame.Rect(
-        hintergrund_x, hintergrund_y,
-        hintergrund_breite, hintergrund_hoehe,
-    )
-    pygame.draw.rect(_fenster, (20, 20, 30, 200), hintergrund_rect)   # Halb-transparent
-    pygame.draw.rect(_fenster, farbe, hintergrund_rect, 2)   # Rahmen in Gebäude-Farbe
-    
-    # ── Haupttext zeichnen (oben im Hintergrund) ─────────────────────────
-    text_x = hintergrund_x + hintergrund_padding + 50  # Platz für Bildvorschau
-
-    text_y = hintergrund_y + 8
-    _fenster.blit(text, (text_x, text_y))
-    
-    # ── Kosten-Text zeichnen (darunter, kleinere Schrift) ────────────────
-    kosten_y = text_y + 24
-    _fenster.blit(kosten_text, (text_x, kosten_y))
-
-    # ── Produktion-Text (grün) — NEU in Stunde 9 ─────────────────────────
-    produktion_y = kosten_y + 22
-    _fenster.blit(produktion_surface, (text_x, produktion_y))
-
-    # ── Verbrauch-Text (rot) — NEU in Stunde 9 ───────────────────────────
-    verbrauch_y = produktion_y + 22
-    _fenster.blit(verbrauch_surface, (text_x, verbrauch_y))
-    
-    # ── Personalbedarf zeichnen ───────────────────────────────────────────
-    personal_y = verbrauch_y + 22
-    _fenster.blit(personal_surface, (text_x, personal_y))
-
-    # ── Bildvorschau links im Hintergrund zeichnen ───────────────────────
-    # Kinder sehen dadurch sofort, welches Gebäude sie gerade ausgewählt haben.
-    icon_groesse = 42
-    icon_x = hintergrund_x + hintergrund_padding
-    icon_y = hintergrund_y + (hintergrund_hoehe - icon_groesse) // 2
-    icon_rect = pygame.Rect(icon_x, icon_y, icon_groesse, icon_groesse)
-    bild = bild_funktion(gebaeude_auswahl, (icon_groesse, icon_groesse)) if bild_funktion else None
-    if bild is not None:
-        _fenster.blit(bild, icon_rect)
-    else:
-        pygame.draw.rect(_fenster, farbe, icon_rect)
-        kuerzel_text = schrift_klein.render(kuerzel, True, (20, 20, 20))
-        _fenster.blit(kuerzel_text, kuerzel_text.get_rect(center=icon_rect.center))
-    pygame.draw.rect(_fenster, (255, 255, 255), icon_rect, 1)
+    panel.zeichnen("bauinfo", f"Bauinfo  [{kategorie_name or 'Gebäude'}]",
+                   bauinfo_breite, inhalt_hoehe, inhalt,
+                   standard_x=(_fenster.get_width() // 2
+                               - bauinfo_breite // 2),
+                   standard_y=(_fenster.get_height() - bauinfo_hoehe - 16),
+                   akzent=farbe)
 
 
 def _ressourcen_name(ress_name):
@@ -649,56 +704,55 @@ def _ressourcen_name(ress_name):
 # Zeigt Kameraposition und Bedienhinweise — vom Info-Text aus main.py übernommen.
 # ═════════════════════════════════════════════════════════════════════════════
 
-def _kamera_info_zeichnen(kamera_x, kamera_y, karte_breite, karte_hoehe, 
-                          kachel_groesse, bild_breite, bild_hoehe):
-    """
-    Zeigt Kameraposition und Steuerungshinweise an.
-    
-    Wie in Final Earth 2 siehst du Informationen:
-    - Wo bist du gerade auf der Karte? (Kameraposition)
-    - Wie bedienst du das Spiel? (Steuerung)
-    - Was bedeuten die Farben? (Legende der Bodentypen)
-    
-    Parameter:
-        kamera_x      — aktuelle Kamera-x-Position (aus main.py)
-        kamera_y      — aktuelle Kamera-y-Position (aus main.py)
-        karte_breite  — Breite der Karte in Kacheln
-        karte_hoehe   — Höhe der Karte in Kacheln
-        kachel_groesse — Größe einer Kachel in Pixeln
-        bild_breite   — Breite des Fensters in Pixeln
-        bild_hoehe    — Höhe des Fensters in Pixeln
+def uebersicht_panel(kamera_x, kamera_y, karte_breite, karte_hoehe,
+                     kachel_groesse, ressourcen, personal_info=None):
+    """Zeigt Kamera-, Karten- und Personal-Infos als schwebendes Panel.
+
+    Frueher standen diese Texte fest links oben und wurden von der
+    Ressourcenleiste verdeckt. Jetzt sind sie ein eigenes Fenster:
+    mit der Maus an der Titelzeile verschiebbar, mit dem "-"-Knopf
+    oder der Taste I minimierbar.
     """
     if _fenster is None:
         return   # Noch nicht initialisiert
-    
+
     schrift = _font(20)
-    
-    # ── Kameraposition ──────────────────────────────────────────────────
-    # Welche Kachel sehen wir gerade in der oberen linken Ecke?
     kachel_x = max(0, kamera_x // kachel_groesse)
     kachel_y = max(0, kamera_y // kachel_groesse)
-    
-    kamera_info = schrift.render(
-        f"Kamera: Kachel ({kachel_x}, {kachel_y})  |  x={kamera_x}  y={kamera_y}",
-        True, (220, 220, 220)
-    )
-    _fenster.blit(kamera_info, (15, 94))
-
-    # ── Karten-Größe und Steuerung ──────────────────────────────────────
-    steuerung_info = schrift.render(
+    zeilen = [
+        f"Kamera: Kachel ({kachel_x}, {kachel_y})  |  "
+        f"x={kamera_x}  y={kamera_y}",
         f"Karte: {karte_breite} x {karte_hoehe} Kacheln  |  "
         f"Pfeiltasten scrollen  |  P / ESC = Pause",
-
-        True, (150, 150, 160)
-    )
-    _fenster.blit(steuerung_info, (15, 119))
-
-    # ── Legende der Bodentypen ───────────────────────────────────────────
-    legende_text = schrift.render(
         "Boden:  Erde  |  Gras  |  Gestein  |  Sand",
-        True, (150, 150, 160)
-    )
-    _fenster.blit(legende_text, (15, 144))
+    ]
+    if personal_info is not None:
+        verfuegbar, bedarf = personal_info
+        zeilen.append(
+            f"Personal: {verfuegbar}/{bedarf}   |   "
+            f"Forschung: {ressourcen.get('forschung', 0):.0f}")
+
+    # Breite an die laengste Zeile anpassen (+ Innenabstand)
+    breite = max(schrift.size(text)[0] for text in zeilen)
+    breite += 2 * panel.RAND_INNEN + 8
+    hoehe = len(zeilen) * 21
+
+    def inhalt(x0, y0, b, h):
+        """Malt die Info-Zeilen untereinander in das Panel."""
+        y = y0
+        for index, text in enumerate(zeilen):
+            letzte = index == len(zeilen) - 1
+            if index == 0:
+                farbe = (225, 230, 240)
+            elif letzte and personal_info is not None:
+                farbe = (232, 220, 165)   # Personal/Forschung
+            else:
+                farbe = (165, 182, 205)
+            _fenster.blit(schrift.render(text, True, farbe), (x0, y))
+            y += 21
+
+    panel.zeichnen("uebersicht", "Übersicht  [I]", breite, hoehe, inhalt,
+                   standard_x=14, standard_y=HUD_HOEHE + 8)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -758,27 +812,16 @@ def hud_zeichnen(ressourcen, gebaeude_auswahl, gebaeude_typen,
                                 kategorie_name, kategorie_position,
                                 bild_funktion)
 
-    # ── Teil 3: Kameraposition und Steuerung ────────────────────────────
-    # Zeigt wo wir sind und wie wir steuern
-    _kamera_info_zeichnen(
-        kamera_x, kamera_y,
-        60, 40, 48,  # KARTE_BREITE, KARTE_HOEHE, KACHEL_GROESSE aus main.py
-        _fenster.get_width() if _fenster else 1000,   # BILD_BREITE
-        _fenster.get_height() if _fenster else 700,    # BILD_HOEHE
-    )
+    # ── Teil 3: Übersicht (Kamera, Karte, Personal, Forschung) ──────────
+    # Schwebendes Panel: verschiebbar, minimierbar (Taste I).
+    uebersicht_panel(kamera_x, kamera_y, 60, 40, 48,
+                    ressourcen, personal_info)
 
     # ── Teil 4: Meldung oben — NEU in Stunde 9 ──────────────────────────
     # Wenn eine Meldung aktiv ist (Timer > 0), zeichnen wir sie als
     # auffälligen roten Banner am oberen Bildschirmrand und zählen den
     # Timer pro Frame herunter (bei 60 FPS: 120 Frames = 2 Sekunden).
     global _meldung_timer
-    if personal_info is not None:
-        verfuegbar, bedarf = personal_info
-        schrift_personal = _font(22)
-        personal_text = schrift_personal.render(
-            f"Personal: {verfuegbar}/{bedarf}   |   Forschung: {ressourcen.get('forschung', 0):.0f}",
-            True, (230, 220, 170))
-        _fenster.blit(personal_text, (15, 174))
 
     if _meldung_timer > 0:
 

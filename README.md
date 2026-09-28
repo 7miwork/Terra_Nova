@@ -25,6 +25,8 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | TAB / F / E | Baumenü, Forschung, Handel |
 | +/− | Spielgeschwindigkeit |
 | ESC | Pause (**S** = speichern, **I** = Missionen, **A** = Achievements) |
+| Maus | Fenster an der Titelzeile ziehen; **–** minimiert, **X** blendet aus |
+| S / C / I / L | Fenster: Verteidigung / Bauinfo / Übersicht / Layout zurücksetzen |
 | L | Spielstand laden (im Hauptmenü) |
 | R | Spielregeln wählen (im Hauptmenü) |
 
@@ -64,6 +66,24 @@ Details für Schülerinnen und Schüler: **FORTGESCHRITTEN_SCHUELERHANDBUCH.md**
   Angriff löst nie selbst ein Game Over aus.
 - Der Einstieg: Forschung „Militärtraining“ → Kaserne (Typ 21). Höchstens
   30 % der Bevölkerung dürfen gleichzeitig Verteidiger sein.
+
+## Schwebende Info-Fenster
+
+Die vier Info-Fenster — **Übersicht** (Kamera, Personal), **Verteidigung**,
+**Ziel** und **Bauinfo** — sind frei verschiebbar:
+
+- an der **Titelzeile** mit der linken Maustaste ziehen,
+- **–** minimiert auf die Titelzeile (Knopf wird zu **+**),
+- **X** blendet das Fenster aus.
+
+Tasten: **S** Verteidigung, **C** Bauinfo, **I** Übersicht, **O** Ziel,
+**L** setzt die ganze Anordnung wieder auf die Standardpositionen zurück.
+Ein Klick in ein Fenster wird nicht an die Karte weitergegeben — man baut
+also nie versehentlich unter einem Fenster.
+
+Die Ressourcenleiste berechnet Spaltenbreite und Schriftgröße selbst
+(`hud.ressourcen_leiste_layout`), damit sich Werte wie „Bevoelkerung:
+24/100“ nie mehr überlappen oder am Rand abgeschnitten werden.
 
 ## Selbsttesten
 

@@ -84,6 +84,7 @@ import missionen    # Missionszentrale und Belohnungen
 import ton          # Musik und Soundeffekte (Fortgeschrittener Kurs)
 import logistik     # Strassen, Netz und Versorgung (Fortgeschrittener Kurs)
 import gegner       # Feindliche Angriffe und Verteidigung (Fortgeschrittener Kurs)
+import panel        # Schwebende Info-Fenster (Fortgeschrittener Kurs)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -672,6 +673,9 @@ def neues_spiel_starten():
     _hilfe_offen = False
     _terraform_modus = False
     _ziel_anzeige_sichtbar = True
+    # Schwebende Fenster: Standardpositionen setzen, alles einblenden.
+    panels_anordnen()
+    panel.zustand_zuruecksetzen()
     spiel_ende_titel = ""
     spiel_ende_grund = ""
     _null_nahrung_ticks = 0
@@ -762,6 +766,8 @@ def spielstand_laden():
     _hilfe_offen = False
     _terraform_modus = False
     _ziel_anzeige_sichtbar = True
+    panels_anordnen()
+    panel.sichtbar_setzen("ziel", True)
     spiel_ende_titel = ""
     spiel_ende_grund = ""
     versorgungszaehler = daten.get("versorgungszaehler", {})
@@ -837,24 +843,53 @@ def spielstatus_pruefen():
     achievements_pruefen()
 
 
+def panels_anordnen():
+    """Setzt die Standardpositionen der schwebenden Info-Fenster.
+
+    Alle Fenster sitzen unterhalb des HUD-Balkens und ueberlappen sich
+    nicht — genau das war im Screenshot das Problem. Danach bleiben sie
+    frei verschiebbar; Taste L stellt diese Anordnung wieder her.
+    """
+    panel.initialisieren(fenster)
+    breite = fenster.get_width()
+    oben = hud.HUD_HOEHE + 8
+    panel.standard_setzen("uebersicht", 14, oben)
+    panel.standard_setzen("verteidigung", breite - 238, oben)
+    panel.standard_setzen("ziel", breite - 312, oben + 158)
+    panel.standard_setzen("bauinfo", max(10, breite // 2 - 260), 520)
+
+
 def ziel_schalter_rect():
-    """Liefert den Klickbereich zum Schließen oder Öffnen der Zielanzeige."""
-    if _ziel_anzeige_sichtbar:
-        # Das X sitzt oben rechts im sichtbaren Zielpanel.
-        return pygame.Rect(BILD_BREITE - 44, 60, 22, 22)
-    # Im geschlossenen Zustand bleibt ein kleiner, unaufdringlicher Button.
+    """Klickbereich zum Ein-/Ausblenden der Zielanzeige.
+
+    Sichtbar: die Titelzeile des Fensters (dort sitzen auch "-" und "X").
+    Ausgeblendet: ein kleiner Knopf, der die Ziele wieder oeffnet.
+    """
+    if panel.ist_sichtbar("ziel"):
+        titel = panel.titel_rect("ziel")
+        if titel is not None:
+            return titel
     return pygame.Rect(BILD_BREITE - 118, 54, 100, 26)
 
 
 def ziel_anzeige_umschalten():
     """Schaltet die Zielanzeige um, ohne den Spielzustand zu verändern."""
     global _ziel_anzeige_sichtbar
-    _ziel_anzeige_sichtbar = not _ziel_anzeige_sichtbar
+    _ziel_anzeige_sichtbar = panel.umschalten("ziel")
+    return _ziel_anzeige_sichtbar
 
 
 def ziel_zeichnen():
-    """Zeigt Sieg-/Niederlageziele oder den kleinen Öffnen-Button an."""
-    if not _ziel_anzeige_sichtbar:
+    """Zeigt Sieg-/Niederlageziele als schwebendes Fenster.
+
+    Das Fenster laesst sich an der Titelzeile verschieben, mit "-"
+    minimieren und mit "X" ausblenden (Taste O holt es zurueck). Frueher
+    lag es fest im HUD-Balken und hat die Ressourcen verdeckt.
+    """
+    global _ziel_anzeige_sichtbar
+    if not panel.ist_sichtbar("ziel"):
+        _ziel_anzeige_sichtbar = False
+        # Kleiner Knopf, damit man die Anzeige wiederfindet (Taste O).
         mini = ziel_schalter_rect()
         pygame.draw.rect(fenster, (8, 14, 28), mini, border_radius=5)
         pygame.draw.rect(fenster, (75, 110, 150), mini, 1, border_radius=5)
@@ -863,9 +898,7 @@ def ziel_zeichnen():
                      (mini.left + 8, mini.top + 5))
         return
 
-    panel = pygame.Surface((300, 66), pygame.SRCALPHA)
-    panel.fill((8, 14, 28, 218))
-    pygame.draw.rect(panel, (75, 110, 150), panel.get_rect(), 1, border_radius=6)
+    _ziel_anzeige_sichtbar = True
     schrift = pygame.font.Font(None, 19)
     regel = aktives_regelwerk()
     bevoelkerung = int(ressourcen_dict.get("bevoelkerung", 0))
@@ -877,16 +910,21 @@ def ziel_zeichnen():
     else:
         zieltext = "Freies Spiel: kein Endziel"
         status = "Baue und experimentiere ohne Zeitdruck."
-    panel.blit(schrift.render(zieltext, True, (235, 240, 255)), (10, 10))
-    panel.blit(schrift.render(status, True, (160, 215, 245)), (10, 34))
-    # Das X ist ein sichtbarer Mausklick zum Schließen. O funktioniert zusätzlich.
-    pygame.draw.rect(panel, (70, 90, 120), (274, 5, 20, 20), border_radius=4)
-    panel.blit(schrift.render("X", True, (255, 220, 220)), (280, 6))
+    zeilen_inhalt = [(zieltext, (235, 240, 255)), (status, (160, 215, 245))]
     if (regel["niederlage_ticks"] is not None and
             (_null_nahrung_ticks or _null_energie_ticks)):
-        warnung = "Versorgung kritisch!"
-        panel.blit(schrift.render(warnung, True, (255, 180, 100)), (10, 50))
-    fenster.blit(panel, (BILD_BREITE - 312, 54))
+        zeilen_inhalt.append(("Versorgung kritisch!", (255, 180, 100)))
+
+    def inhalt(x0, y0, b, h):
+        """Malt die Ziel-Zeilen in das Fenster."""
+        y = y0
+        for text, farbe in zeilen_inhalt:
+            fenster.blit(schrift.render(text, True, farbe), (x0, y))
+            y += 20
+
+    panel.zeichnen("ziel", "Ziel  [O]", 300, len(zeilen_inhalt) * 20 + 2,
+                   inhalt, standard_x=BILD_BREITE - 312,
+                   standard_y=hud.HUD_HOEHE + 8)
 
 
 def menue_titel():
@@ -1256,6 +1294,23 @@ def ereignisse_verarbeiten():
             if ereignis.key == pygame.K_o:
                 ziel_anzeige_umschalten()
                 return True
+
+            # Fortgeschrittener Kurs: schwebende Fenster ein-/ausblenden.
+            # S = Verteidigung, C = Bauinfo, I = Uebersicht, L = Layout zurueck.
+            if ereignis.key == pygame.K_s:
+                panel.umschalten("verteidigung")
+                return True
+            if ereignis.key == pygame.K_c:
+                panel.umschalten("bauinfo")
+                return True
+            if ereignis.key == pygame.K_i:
+                panel.umschalten("uebersicht")
+                return True
+            if ereignis.key == pygame.K_l:
+                panels_anordnen()
+                panel.zustand_zuruecksetzen()
+                hud.meldung_anzeigen("Fenster-Layout zurückgesetzt")
+                return True
             # ── Fortgeschrittener Kurs: N schaltet die Musik an/aus ──
             # N ist im laufenden Spiel frei. Im Endmenue bedeutet N weiterhin
             # "neues Spiel", deshalb steht diese Pruefung nur hier.
@@ -1370,6 +1425,14 @@ def ereignisse_verarbeiten():
                         print(f"Kamera zur Basis gesprungen! ({ziel_x}, {ziel_y})")
                         break  # Nur die erste Basis suchen
 
+
+        # ── Schwebende Info-Fenster: Ziehen und Loslassen ──────────────────
+        # MOUSEMOTION und MOUSEBUTTONUP werden sonst nirgends gebraucht:
+        # Sie dienen nur dem Verschieben der Fenster an ihrer Titelzeile.
+        if ereignis.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP):
+            panel.maus_ereignis(ereignis)
+            continue
+
         # STUNDE 3 — MAUSKLICK ERKENNEN
         # pygame.MOUSEBUTTONDOWN wird ausgelöst, wenn der Spieler klickt.
         # Wir fragen die Mausposition ab und berechnen die Kachel.
@@ -1405,6 +1468,11 @@ def ereignisse_verarbeiten():
                 continue
             if handel.handelsmenue_ist_offen():
                 continue
+            # Schwebende Fenster liegen ÜBER der Karte: Ein Klick darauf
+            # darf kein Gebäude bauen, abreißen oder terraformen.
+            if panel.maus_ereignis(ereignis):
+                continue
+
             # Der Schalter liegt über der Karte. Deshalb muss der Klick vor
             # der Umrechnung in eine Kachelposition abgefangen werden.
             if (ereignis.button == 1 and
@@ -1571,6 +1639,7 @@ def ereignisse_verarbeiten():
 
 def spielwelt_zeichnen():
     """Zeichnet die aktuelle Welt und alle zustandsabhängigen Overlays."""
+    panel.frame_start()      # Merkliste der schwebenden Fenster leeren
     hintergrund_zeichnen()
     if spiel_status == "hauptmenue":
         hauptmenue_zeichnen()
@@ -1650,6 +1719,7 @@ def spiel_starten():
     ton.musik_starten()
     logistik.initialisieren(fenster)
     gegner.initialisieren(fenster)
+    panel.initialisieren(fenster)
 
     print("Hauptmenü geöffnet. Enter startet ein neues Spiel, L lädt einen Spielstand.")
     print(f"Karte: {KARTE_BREITE} x {KARTE_HOEHE} Kacheln = "
@@ -1751,13 +1821,23 @@ def hilfe_zeichnen():
         "WASD         — Kamera scrollen; Pfeil links/rechts = Auswahl",
         "B            — Springe zur Basis",
         "Leertaste    — Pause / Start; + / - = Geschwindigkeit",
+        "S            — Verteidigungs-Fenster ein-/ausblenden",
+        "C            — Bauinfo-Fenster ein-/ausblenden",
+        "I            — Uebersicht-Fenster ein/aus (Pause: Missionen)",
+        "L            — Fenster-Layout zurücksetzen",
+        "",
+        "Fenster      — an der Titelzeile ziehen; - = minimieren, X = schliessen",
     ]
 
-    y = 80
-    for zeile in zeilen:
-        text = schrift_normal.render(zeile, True, (220, 220, 220))
-        fenster.blit(text, (50, y))
-        y += 28
+    # Zwei Spalten: So bleiben auch die neuen Zeilen gut lesbar.
+    haelfte = (len(zeilen) + 1) // 2
+    spalten_x = (50, 520)
+    for index, eintrag in enumerate(zeilen):
+        spalte = 0 if index < haelfte else 1
+        y = 80 + (index % haelfte) * 28
+        text = schrift_normal.render(eintrag, True, (220, 220, 220))
+        fenster.blit(text, (spalten_x[spalte], y))
+    y = 80 + haelfte * 28
 
     hinweis = schrift_normal.render("(H drücken zum Schließen)", True, (150, 150, 150))
     fenster.blit(hinweis, (50, y + 10))

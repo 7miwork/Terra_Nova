@@ -73,6 +73,7 @@ import pygame
 import forschung
 import ressourcen
 import ton
+import panel     # schwebende Info-Fenster
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -126,6 +127,16 @@ ZUSTAND_FRIEDEN = "frieden"
 ZUSTAND_WARNUNG = "warnung"
 ZUSTAND_GEFECHT = "gefecht"
 _ZUSTAENDE = (ZUSTAND_FRIEDEN, ZUSTAND_WARNUNG, ZUSTAND_GEFECHT)
+
+
+_font_cache = {}
+
+
+def _font(groesse):
+    """Wiederverwendbare Schrift (nicht jeden Frame neu erzeugen)."""
+    if groesse not in _font_cache:
+        _font_cache[groesse] = pygame.font.Font(None, groesse)
+    return _font_cache[groesse]
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -470,28 +481,23 @@ def banner_ist_sichtbar():
 # BLOCK 6: DARSTELLUNG — reine Zeichenfunktionen ohne Spiellogik
 # ═════════════════════════════════════════════════════════════════════════════
 
-# Rechte Fensterkante: Das Panel sitzt unter dem HUD (HUD-Ende y=82).
-_PANEL_BREITE = 250
-_PANEL_RAND = 10
-_PANEL_OBERKANTE = 92
+# Rechte Fensterkante: Das Panel wird von panel.py verwaltet (schwebendes
+# Fenster, verschiebbar und minimierbar) - die Position steht in main.panels_anordnen().
 
 
 def panel_zeichnen(ressourcen_dict, liste_gebaeude, regelwerk=None):
-    """Zeichnet das Verteidigungs-Panel rechts unter dem HUD.
+    """Zeigt das Verteidigungs-Panel als schwebendes Fenster.
 
-    In den Regelwerken OHNE Gegner (Entspannt, Freies Spiel) erscheint
-    ueberhaupt kein Panel — dann gibt es ja auch nichts zuverteidigen.
-    Zeichnen passiert pro Frame; die Spiellogik selbst steckt
-    ausschliesslich in gegner_tick().
+    Das Fenster laesst sich an der Titelzeile mit der Maus verschieben,
+    ueber den Knopf "-" (oder die Taste S) minimieren und mit "X"
+    ausblenden. In Regelwerken OHNE Gegner bleibt es weg — dort gibt es
+    nichts zu verteidigen. Gezeichnet wird pro Frame; die Spiellogik
+    steckt weiterhin nur in gegner_tick().
     """
     if _fenster is None:
         return
     if not regelwerk_gegner_aktiv(regelwerk):
         return
-
-    breite, hoehe = _fenster.get_size()
-    schrift = pygame.font.Font(None, 20)
-    schrift_klein = pygame.font.Font(None, 17)
 
     verteidiger = int(round(float(ressourcen_dict.get("verteidiger", 0))))
     kontingent = int(round(ressourcen.verteidiger_kontingent(ressourcen_dict)))
@@ -499,40 +505,36 @@ def panel_zeichnen(ressourcen_dict, liste_gebaeude, regelwerk=None):
     tuerme = arbeitende_lasertuerme(liste_gebaeude)
     staerke = verteidigungsstaerke(ressourcen_dict, liste_gebaeude)
 
+    # Immer sechs Zeilen — dadurch bleibt die Fensterhoehe konstant und
+    # die Panels koennen sauber untereinander angeordnet werden.
     zeilen = [
-        (f"VERTEIDIGUNG  — Welle {max(1, _welle)}", (255, 225, 130)),
+        (f"Welle {max(1, _welle)}", (255, 225, 130)),
         (f"Verteidiger: {verteidiger}/{kontingent}", (210, 225, 245)),
         (f"Raumschiffe: {raumschiffe}", (210, 225, 245)),
-        (f"Lasertürme: {tuerme} arbeitend", (210, 225, 245)),
-        (f"Stärke: {staerke:.1f}", (150, 235, 175)),
+        (f"Lasertuerme: {tuerme} in Betrieb", (210, 225, 245)),
+        (f"Staerke: {staerke:.1f}", (150, 235, 175)),
     ]
     if _status == ZUSTAND_WARNUNG:
-        zeilen.append((f"⚠ ANGRIFF in {_rest_ticks} Ticks!",
-                       (255, 115, 105)))
-        zeilen.append((f"Gegner-Stärke: {_warnung_staerke:.1f}",
-                       (255, 185, 120)))
+        zeilen.append((f"ANGRIFF in {_rest_ticks} Ticks!", (255, 115, 105)))
     else:
-        zeilen.append((f"Frieden: nächste Welle in {_rest_ticks}",
-                       (150, 165, 190)))
+        zeilen.append((f"Naechster Angriff in {_rest_ticks}", (150, 165, 190)))
 
     zeilen_hoehe = 19
-    box_hoehe = 34 + zeilen_hoehe * len(zeilen)
-    x = breite - _PANEL_BREITE - _PANEL_RAND
-    y = _PANEL_OBERKANTE
-    box = pygame.Rect(x, y, _PANEL_BREITE, box_hoehe)
+    fenster_breite = 226
+    inhalt_hoehe = zeilen_hoehe * len(zeilen) + 2
 
-    flaeche = pygame.Surface(box.size, pygame.SRCALPHA)
-    flaeche.fill((12, 18, 40, 215))
-    randfarbe = (255, 120, 110) if _status == ZUSTAND_WARNUNG else (95, 130, 190)
-    pygame.draw.rect(flaeche, randfarbe, flaeche.get_rect(), width=2,
-                     border_radius=7)
+    def inhalt(x0, y0, b, h):
+        """Malt die Zeilen untereinander in das Fenster."""
+        y = y0
+        for text, farbe in zeilen:
+            _fenster.blit(_font(18).render(text, True, farbe), (x0, y))
+            y += zeilen_hoehe
 
-    for index, (text, farbe) in enumerate(zeilen):
-        font = schrift if index == 0 else schrift_klein
-        flaeche.blit(font.render(text, True, farbe), (10, 8 + index * zeilen_hoehe))
-
-    _fenster.blit(flaeche, box.topleft)
-
+    panel.zeichnen("verteidigung", "Verteidigung  [S]", fenster_breite,
+                   inhalt_hoehe, inhalt,
+                   standard_x=(_fenster.get_width() - fenster_breite - 12),
+                   standard_y=92,
+                   akzent=(255, 120, 110) if _status == ZUSTAND_WARNUNG else None)
 
 def banner_zeichnen():
     """Zeichnet das 6-Sekunden-Ergebnis-Banner oben mittig.
