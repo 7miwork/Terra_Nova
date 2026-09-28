@@ -178,9 +178,23 @@ uhr = pygame.time.Clock()
 
 # ── Kamera-Position ─────────────────────────────────────────────────────────
 # Die Kamera bestimmt welchen Ausschnitt der Karte wir sehen.
-# 0, 0 = wir schauen auf die obere linke Ecke.
+# 0, 0 = wir schauen auf die obere linke Ecke — Kachel (0, 0) liegt dann
+# genau UNTER der Ressourcenleiste, keine Kachel wird vom HUD verdeckt.
 kamera_x = 0
 kamera_y = 0
+
+
+def kamera_zeichnen_y():
+    """Kamera-Y für das Weltzeichnen — um das HUD nach unten versetzt.
+
+    Die Ressourcenleiste (hud.HUD_HOEHE Pixel hoch) liegt über den oberen
+    Kacheln der Karte. Beim Zeichnen schieben wir die Welt deshalb um
+    diese Höhe nach unten. Bei der Umrechnung Maus → Kachel kommt
+    derselbe Versatz in umgekehrter Richtung zum Tragen:
+
+        kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
+    """
+    return kamera_y - hud.HUD_HOEHE
 
 # ── Karten-Daten (wie in Final Earth 2) ────────────────────────────────────
 # Die Karte ist ein 2D-Array (Liste von Listen).
@@ -455,14 +469,16 @@ def karte_zeichnen():
         KARTE_BREITE,
         (kamera_x + BILD_BREITE) // KACHEL_GROESSE + 2,
     )
-    erste_zeile = max(0, kamera_y // KACHEL_GROESSE)
+    # Die Welt beginnt unter der Ressourcenleiste (siehe kamera_zeichnen_y).
+    kamera_anzeige_y = kamera_zeichnen_y()
+    erste_zeile = max(0, kamera_anzeige_y // KACHEL_GROESSE)
     letzte_zeile = min(
         KARTE_HOEHE,
-        (kamera_y + BILD_HOEHE) // KACHEL_GROESSE + 2,
+        (kamera_anzeige_y + BILD_HOEHE) // KACHEL_GROESSE + 2,
     )
 
     for zeile in range(erste_zeile, letzte_zeile):
-        pixel_y = zeile * KACHEL_GROESSE - kamera_y
+        pixel_y = zeile * KACHEL_GROESSE - kamera_anzeige_y
         for spalte in range(erste_spalte, letzte_spalte):
             pixel_x = spalte * KACHEL_GROESSE - kamera_x
             kachel_rect = pygame.Rect(
@@ -483,12 +499,18 @@ def karte_zeichnen():
 def kamera_begrenzen():
     """
     Verhindert dass die Kamera über den Rand der Karte scrollt.
+
+    Nach oben endet die Kamera bei 0 — Kachel (0, 0) liegt dann genau
+    unter der Ressourcenleiste (die Welt wird um HUD_HOEHE nach unten
+    gezeichnet, siehe kamera_zeichnen_y). Nach unten darf die Kamera um
+    HUD_HOEHE weiter scrollen, damit die letzte Kachelreihe noch unter
+    der Leiste vollstaendig sichtbar wird.
     """
     global kamera_x, kamera_y
     karte_pixel_breite = KARTE_BREITE * KACHEL_GROESSE
     karte_pixel_hoehe  = KARTE_HOEHE  * KACHEL_GROESSE
     max_kamera_x = karte_pixel_breite - BILD_BREITE
-    max_kamera_y = karte_pixel_hoehe  - BILD_HOEHE
+    max_kamera_y = karte_pixel_hoehe - BILD_HOEHE + hud.HUD_HOEHE
     kamera_x = max(0, min(max_kamera_x, kamera_x))
     kamera_y = max(0, min(max_kamera_y, kamera_y))
 
@@ -1418,9 +1440,11 @@ def ereignisse_verarbeiten():
                         # Mitte der Basis-Kachel berechnen
                         ziel_x = ein_gebaeude["kachel_x"] * KACHEL_GROESSE
                         ziel_y = ein_gebaeude["kachel_y"] * KACHEL_GROESSE
-                        # Kamera zentrieren (Fenster-Mitte minus halbe Kachel)
+                        # Kamera zentrieren: Ziel in die Mitte des sichtbaren Spielfelds
+                        # unter der Ressourcenleiste (Fenster-Mitte minus HUD minus halbe Kachel)
                         kamera_x = ziel_x - BILD_BREITE // 2 + KACHEL_GROESSE // 2
-                        kamera_y = ziel_y - BILD_HOEHE // 2 + KACHEL_GROESSE // 2
+                        kamera_y = (ziel_y - (BILD_HOEHE - hud.HUD_HOEHE) // 2
+                            + KACHEL_GROESSE // 2)
                         kamera_begrenzen()  # Nicht über den Rand scrollen!
                         print(f"Kamera zur Basis gesprungen! ({ziel_x}, {ziel_y})")
                         break  # Nur die erste Basis suchen
@@ -1479,13 +1503,21 @@ def ereignisse_verarbeiten():
                     ziel_schalter_rect().collidepoint(ereignis.pos)):
                 ziel_anzeige_umschalten()
                 continue
+            # Die Ressourcenleiste liegt ueber der Karte — Klicks darauf
+            # duerfen kein Gebäude bauen, abreißen oder terraformen
+            # (sonst wuerde im Verborgenen hinter dem HUD gebaut).
+            if (ereignis.button in (1, 3) and
+                    ereignis.pos[1] < hud.balkenhoehe_aktuell()):
+                continue
             if ereignis.button == 1:  # 1 = linke Maustaste
 
                 maus_x, maus_y = ereignis.pos
                 # Bildschirm-Position -> Kachel-Position umrechnen
-                # (Kamera-Versatz addieren, dann durch Kachelgröße teilen)
+                # (Kamera-Versatz addieren, dann durch Kachelgröße teilen).
+                # y nutzt kamera_zeichnen_y() — die Welt liegt um das HUD
+                # versetzt, siehe Definition der Funktion.
                 kachel_x = (maus_x + kamera_x) // KACHEL_GROESSE
-                kachel_y = (maus_y + kamera_y) // KACHEL_GROESSE
+                kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
                 
                 # ── STUNDE 8: Boden-Typ der Kachel prüfen ──────────────────
                 # Hole den Bodentyp der angeklickten Kachel
@@ -1568,7 +1600,7 @@ def ereignisse_verarbeiten():
             elif ereignis.button == 3:
                 maus_x, maus_y = ereignis.pos
                 kachel_x = (maus_x + kamera_x) // KACHEL_GROESSE
-                kachel_y = (maus_y + kamera_y) // KACHEL_GROESSE
+                kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
 
                 # 1. Gebäude von der Kachel entfernen.
                 #    gebaeude_abreissen() gibt den typ_index zurück oder None.
@@ -1655,9 +1687,12 @@ def spielwelt_zeichnen():
         return
 
     karte_zeichnen()
-    gebaeude.gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_y)
+    # gebaeude und logistik zeichnen die Welt — deshalb die um das HUD
+    # versetzte Kamera uebergeben (karte_zeichnen rechnet intern gleich).
+    gebaeude.gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_zeichnen_y())
     # Fortgeschrittener Kurs: Logistik-Ansicht nur bei Bedarf zeichnen.
-    logistik.zeichnen(liste_gebaeude, kamera_x, kamera_y, KACHEL_GROESSE)
+    logistik.zeichnen(liste_gebaeude, kamera_x, kamera_zeichnen_y(),
+                      KACHEL_GROESSE)
     hud.hud_zeichnen(ressourcen_dict, gebaeude_auswahl,
                      gebaeude.GEBAEUDE_TYPEN,
                      kamera_x, kamera_y,
@@ -1880,7 +1915,8 @@ if __name__ == "__main__":
 # Stunde 3 (Wiederholung):
 #   ✓ pygame.MOUSEBUTTONDOWN — Mausklicks erkennen
 #   ✓ ereignis.pos — Mausposition abfragen
-#   ✓ Kachel aus Mausposition berechnen: kachel = (maus + kamera) // kachel_groesse
+#   ✓ Kachel aus Mausposition berechnen: kachel_x = (maus + kamera_x) // GROESSE,
+#     kachel_y = (maus + kamera_zeichnen_y()) // GROESSE (y ist um das HUD versetzt)
 #   ✓ Gebäude speichern als Wörterbuch: {"typ": 0, "x": ..., "y": ...}
 #   ✓ Gebäude zeichnen — farbige Rechtecke auf der Karte
 #   ✓ Doppelbelegung prüfen — Ist die Kachel schon belegt?

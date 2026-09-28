@@ -75,6 +75,15 @@ _letzte_balkenhoehe = HUD_HOEHE
 _letztes_layout = None
 
 
+def balkenhoehe_aktuell():
+    """Liefert die Hoehe des zuletzt gezeichneten Ressourcen-Balkens.
+
+    main.py faengt Klicks auf die Leiste ab, weil das HUD ueber den
+    oberen Kacheln der Karte liegt.
+    """
+    return _letzte_balkenhoehe
+
+
 def _font(groesse):
     """Liefert eine wiederverwendbare Schrift statt sie pro Frame zu erzeugen."""
     if groesse not in _font_cache:
