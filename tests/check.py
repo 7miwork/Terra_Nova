@@ -3,7 +3,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import gebaeude
 import ressourcen
@@ -16,7 +16,7 @@ import missionen
 print('=== GEBAEUDE_TYPEN ===')
 for i, daten in enumerate(gebaeude.GEBAEUDE_TYPEN):
     bild = daten.get('bild', '')
-    bild_pfad = os.path.join(os.path.dirname(__file__), 'bilder', bild)
+    bild_pfad = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bilder', bild)
     print(f"  [{i}] {daten['name']} | {daten['breite']}x{daten['hoehe']} | "
           f"Bild: {bild} ({'vorhanden' if os.path.exists(bild_pfad) else 'FEHLT'})")
 
@@ -35,7 +35,7 @@ for i, technologie in enumerate(forschung.TECHNOLOGIEN):
           f"{technologie['kategorie']} | {technologie['kosten']} Punkte | {technologie['zeit']} Ticks")
 
 assert len(gebaeude.GEBAEUDE_TYPEN) == len(ressourcen.GEBAEUDE_WIRTSCHAFT)
-assert all(os.path.exists(os.path.join(os.path.dirname(__file__), 'bilder', daten['bild']))
+assert all(os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bilder', daten['bild']))
            for daten in gebaeude.GEBAEUDE_TYPEN)
 
 print('\n=== GEGNER UND VERTEIDIGUNG (Phase 4) ===')
@@ -78,11 +78,11 @@ for _typ in (21, 22, 23):
 
 print('\n=== SOUNDS UND BILDER (Phase 4) ===')
 for _ereignis in ("angriff_warnung", "abwehr_erfolg", "ausgeraubt"):
-    _pfad = os.path.join(os.path.dirname(__file__), "sounds", ton.SOUNDS[_ereignis])
+    _pfad = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sounds", ton.SOUNDS[_ereignis])
     assert os.path.exists(_pfad), _pfad
     print(f"  OK {_ereignis} -> {ton.SOUNDS[_ereignis]}")
 for _bild in ("kaserne.png", "raumschiffwerft.png", "laserturm.png"):
-    assert os.path.exists(os.path.join(os.path.dirname(__file__), "bilder", _bild)), _bild
+    assert os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bilder", _bild)), _bild
     print(f"  OK bilder/{_bild}")
 
 print('\n=== ACHIEVEMENTS UND MISSION (Phase 4) ===')
@@ -107,7 +107,7 @@ assert hasattr(hud, "ressourcen_leiste_layout") and hasattr(hud, "_letztes_layou
 # Verdrahtung: jedes Fenster zeichnet genau ein Modul, alle Mauspfade sind da
 _quellen = {}
 for _datei in ("main.py", "hud.py", "gegner.py"):
-    with open(os.path.join(os.path.dirname(__file__), _datei), encoding="utf-8") as _f:
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), _datei), encoding="utf-8") as _f:
         _quellen[_datei] = _f.read()
 for _datei, _muss in (("hud.py", 'panel.zeichnen("uebersicht"'),
                       ("hud.py", 'panel.zeichnen("bauinfo"'),

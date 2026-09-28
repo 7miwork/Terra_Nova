@@ -16,7 +16,7 @@ gebaut ist, was du in Phase 4 veränderst und wie du dich selbst testest.
   `gegner.gegner_tick` → `spielstatus_pruefen` → `missionen.pruefen`.
 - **Speichern:** Pause (**ESC**) und **S**; Laden im Hauptmenü mit **L**.
 - **Selbsttests:** Nach jeder Änderung
-  `python check.py` und `python test_fortgeschritten_gegner.py`.
+  `python tests/check.py` und `python tests/test_fortgeschritten_gegner.py`.
 
 ## 2. Die Module und ihre Aufgaben
 
@@ -159,7 +159,7 @@ Pixel) und „Bevoelkerung: 24/100“ lief in die Nachbarspalte.
 3. `forschung.py`: Freischaltung als Technologie, `voraussetzung` vermerken.
 4. `bilder/`: PNG ablegen (Formate siehe `BILDER_ANLEITUNG.md`).
 5. `gebaeude.py`: passende Kategorie ergänzen (9 = Spezial / Verteidigung).
-6. `check.py` erweitern, Tests laufen lassen.
+6. `tests/check.py` erweitern, Tests laufen lassen.
 
 ### Neue Technologie
 
@@ -205,9 +205,9 @@ neuer Ressourcenschlüssel.
 
 ## 6. Abnahme — woran du erkennst, dass alles läuft
 
-    python check.py                        # CHECK_OK am Ende
-    python test_fortgeschritten_gegner.py  # "Alle Gegner-Tests bestanden."
-    Get-ChildItem -Filter 'test_*.py | ... # alle PASS
+    python tests/check.py                   # CHECK_OK am Ende
+    python tests/test_fortgeschritten_gegner.py  # "Alle Gegner-Tests bestanden."
+    Get-ChildItem 'tests' -Filter 'test_*.py' | ... # alle PASS
     python main.py                         # manuell: Sirene hören, Banner sehen
 
 Der 300-Frame-Lauf ohne Fenster (Headless) prüft zusätzlich, dass über ein

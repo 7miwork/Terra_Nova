@@ -20,7 +20,7 @@ Wenn ihr nur einen Eintrag in `TECHNOLOGIEN` ergänzt, erscheint die Forschung z
 | `menu.py` | Baumenü mit allen Gebäuden, Kosten und Freischaltungen | Wenn neue Gebäudetypen angezeigt werden sollen |
 | `handel.py` | 2:1-Tausch und Angebote anderer Kolonien | Für Handelssysteme und NPC-Angebote |
 | `bilder/` | PNG-Bilder für die Gebäude | Wenn ihr eigene Grafiken einfügt |
-| `test_stunde11.py` | Kleiner Selbsttest für wichtige Funktionen | Nach jeder größeren Änderung ausführen |
+| `tests/test_stunde11.py` | Kleiner Selbsttest für wichtige Funktionen | Nach jeder größeren Änderung ausführen |
 
 ## 3. Wie ein Forschungs-Dictionary aufgebaut ist
 
@@ -1028,7 +1028,7 @@ Schreibt Kommentare vor allem an Übergängen zwischen Modulen. Ein zukünftiges
 Der Selbsttest wird im Projektordner so gestartet:
 
 ```bash
-python3 test_stunde11.py
+python3 tests/test_stunde11.py
 ```
 
 Für die grafische Kontrolle startet ihr:
@@ -1043,20 +1043,20 @@ Wenn mehrere Personen an der Erweiterung arbeiten, kann jede Person einen Forsch
 
 Ändert immer nur ein System auf einmal. Erstellt zuerst die Forschungszeile, testet das Menü, programmiert danach die Wirkung und testet erneut. Wenn ihr gleichzeitig ID, Kosten, Gebäudeindex und Produktion ändert, ist später schwer zu erkennen, welcher Schritt einen Fehler verursacht hat.
 
-> **Abschlussaufgabe:** Erfindet eine eigene Forschung, fügt sie in den Forschungsbaum ein, programmiert eine sichtbare Wirkung, erstellt ein eigenes PNG-Bild für ein passendes Gebäude und ergänzt mindestens einen Test in `test_stunde11.py`.
+> **Abschlussaufgabe:** Erfindet eine eigene Forschung, fügt sie in den Forschungsbaum ein, programmiert eine sichtbare Wirkung, erstellt ein eigenes PNG-Bild für ein passendes Gebäude und ergänzt mindestens einen Test in `tests/test_stunde11.py`.
 
 ## 12. Referenzen innerhalb des Projekts
 
 Die folgenden Dateien sind die technischen Quellen für dieses Handbuch:
 
-[1]: ./forschung.py "Forschungsbaum und Forschungsfortschritt"
-[2]: ./ressourcen.py "Wirtschaft, Personal, Speicher und Produktionsboni"
-[3]: ./gebaeude.py "Gebäudetypen, Platzierung und Darstellung"
-[4]: ./main.py "Spielschleife und Eingabeverarbeitung"
-[5]: ./hud.py "Ressourcenleiste und Statusanzeigen"
-[6]: ./menu.py "Baumenü"
-[7]: ./handel.py "Handel und NPC-Angebote"
-[8]: ./test_stunde11.py "Portabler Selbsttest"
+[1]: ../forschung.py "Forschungsbaum und Forschungsfortschritt"
+[2]: ../ressourcen.py "Wirtschaft, Personal, Speicher und Produktionsboni"
+[3]: ../gebaeude.py "Gebäudetypen, Platzierung und Darstellung"
+[4]: ../main.py "Spielschleife und Eingabeverarbeitung"
+[5]: ../hud.py "Ressourcenleiste und Statusanzeigen"
+[6]: ../menu.py "Baumenü"
+[7]: ../handel.py "Handel und NPC-Angebote"
+[8]: ../tests/test_stunde11.py "Portabler Selbsttest"
 
 
 ## 13. Mehrkachel-Gebäude: die Universität als 2×3-Schulgebäude
@@ -1169,4 +1169,4 @@ Für ein Mehrkachelgebäude werden `breite` und `hoehe` in `gebaeude.py` gesetzt
 
 ## Testauftrag
 
-Führt nach jeder Änderung `python3 test_stunde11.py` aus. Prüft außerdem im Spiel: Kategorie wählen, mit links/rechts blättern, Baumenü öffnen, Bildvorschau kontrollieren, ein Gebäude bauen, Taste `0` testen, Geschwindigkeit mit `+/-` verändern und die Universität als 2×3-Fläche platzieren und wieder abreißen.
+Führt nach jeder Änderung `python3 tests/test_stunde11.py` aus. Prüft außerdem im Spiel: Kategorie wählen, mit links/rechts blättern, Baumenü öffnen, Bildvorschau kontrollieren, ein Gebäude bauen, Taste `0` testen, Geschwindigkeit mit `+/-` verändern und die Universität als 2×3-Fläche platzieren und wieder abreißen.

@@ -6,7 +6,7 @@ import os
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import sys
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 pygame.init()
@@ -36,7 +36,7 @@ benoetigte_forschungen = {
 assert benoetigte_forschungen.issubset({t["id"] for t in forschung.TECHNOLOGIEN})
 assert len(gebaeude.GEBAEUDE_TYPEN) == len(ressourcen.GEBAEUDE_WIRTSCHAFT)
 assert len(gebaeude.GEBAEUDE_TYPEN) >= 19
-assert all(daten.get("bild") and os.path.exists(os.path.join(os.path.dirname(__file__), "bilder", daten["bild"]))
+assert all(daten.get("bild") and os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bilder", daten["bild"]))
            for daten in gebaeude.GEBAEUDE_TYPEN)
 assert all(index in range(len(gebaeude.GEBAEUDE_TYPEN))
            for kat in gebaeude.GEBAEUDE_KATEGORIEN.values()

@@ -22,7 +22,7 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 |---|---|
 | `main.py` + Module | Der Spielcode — direkt hier starten mit `python main.py` |
 | `bilder/`, `sounds/` | Grafiken und Töne, die das Spiel lädt |
-| `test_*.py`, `check.py` | Selbsttests (siehe unten) |
+| `tests/` | Selbsttests: `test_*.py` und `check.py` (siehe unten) |
 | **`Dokumentation/`** | Alle Handbücher und Anleitungen (.md), PDFs unter `Dokumentation/PDF/`, Erklärbilder unter `Dokumentation/Erklaer Bilder/` |
 | **`unnoetig/`** | Ablage für Dateien, die das Spiel nicht braucht (Altlasten, Einmal-Skripte) — wird nicht ins Repository mitgeschrieben |
 
@@ -57,7 +57,7 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | 1/2 | Sound und Musik | `ton.py`, `sounds_erzeugen.py`, `sounds/` |
 | 3 | Straßennetz und Logistik | `logistik.py` |
 | 4 | Gegner und Verteidigung | `gegner.py`, neue Gebäude 21–23 |
-| 5 | Dokumentation und Abnahme | README, Handbücher, `check.py` |
+| 5 | Dokumentation und Abnahme | README, Handbücher, `tests/check.py` |
 
 Details für Schülerinnen und Schüler: **Dokumentation/FORTGESCHRITTEN_SCHUELERHANDBUCH.md**.
 
@@ -97,16 +97,16 @@ Die Ressourcenleiste berechnet Spaltenbreite und Schriftgröße selbst
 
 ## Selbsttesten
 
-    python check.py                        # Konsistenz aller Listen und Dateien
-    python test_spielname.py               # Spielname in Konstante und Fenstertitel
-    python test_fortgeschritten_gegner.py  # Phase 4: Ablauf, Formeln, Beute
-    python test_fortgeschritten_logistik.py
-    python test_fortgeschritten_sound.py
-    python test_stunde11.py … test_stunde18.py
+    python tests/check.py                        # Konsistenz aller Listen und Dateien
+    python tests/test_spielname.py               # Spielname in Konstante und Fenstertitel
+    python tests/test_fortgeschritten_gegner.py  # Phase 4: Ablauf, Formeln, Beute
+    python tests/test_fortgeschritten_logistik.py
+    python tests/test_fortgeschritten_sound.py
+    python tests/test_stunde11.py … test_stunde18.py
 
 Alle am Stück (PowerShell im Spielordner):
 
-    Get-ChildItem -Filter 'test_*.py' | ForEach-Object { python $_.Name }
+    Get-ChildItem 'tests' -Filter 'test_*.py' | ForEach-Object { python $_.FullName }
 
 ## Spielstände
 

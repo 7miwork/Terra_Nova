@@ -71,7 +71,7 @@ Die alten Hinweise mit „7 Gebäudetypen“ gelten nicht mehr. Die aktuelle Ver
 ## Automatischer Test
 
 ```bash
-python3 test_stunde11.py
+python3 tests/test_stunde11.py
 ```
 
 Erwartet wird `STUNDE11_TESTS_OK`. Wenn der Test fehlschlägt, zuerst die angegebene Zeile lesen und dann nur eine Änderung gleichzeitig durchführen.

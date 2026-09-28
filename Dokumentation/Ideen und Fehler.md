@@ -78,7 +78,7 @@ Die Überlappungen aus dem Screenshot sind behoben:
   Kartenbild in ein Fenster gewandert (links oben).
 - **Klicks:** Ein Klick in ein Fenster wird verbraucht — man baut nie
   versehentlich ein Gebäude unter einem Panel.
-- **Test:** `test_fortgeschritten_panels.py` prüft Anordnung, Ziehen,
+- **Test:** `tests/test_fortgeschritten_panels.py` prüft Anordnung, Ziehen,
   Klemmen, Minimieren, Schließen, Klicken und das Leisten-Layout.
   Zusätzlich `unnoetig/vorschau.py` rendert ein PNG zur Sichtprüfung.
 

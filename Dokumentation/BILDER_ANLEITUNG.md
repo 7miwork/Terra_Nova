@@ -168,7 +168,7 @@ Erstellt eine quadratische PNG-Datei, zum Beispiel 64×64 Pixel. Zeichnet das Ge
  "taste": "", "breite": 1, "hoehe": 1},
 ```
 
-Startet das Spiel vollständig neu, weil die Bilder in `gebaeude_initialisieren()` geladen werden. Danach führt ihr `python3 test_stunde11.py` aus. Der Test verlangt, dass jedes Gebäude einen vorhandenen Dateinamen besitzt.
+Startet das Spiel vollständig neu, weil die Bilder in `gebaeude_initialisieren()` geladen werden. Danach führt ihr `python3 tests/test_stunde11.py` aus. Der Test verlangt, dass jedes Gebäude einen vorhandenen Dateinamen besitzt.
 
 ## Eigenes Mehrkachelbild
 

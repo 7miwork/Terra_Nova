@@ -122,4 +122,4 @@ Erstellt ein eigenes 64×64-PNG für ein 1×1-Gebäude oder ein 64×96-PNG für 
 
 ## Pflichtaufgabe E: Testen und dokumentieren
 
-Führt nach jeder größeren Änderung `python3 test_stunde11.py` aus. Dokumentiert anschließend: Welche Datei wurde geändert? Welche Spielregel ist neu? Welche Taste oder Forschung aktiviert sie? Was ist der Testfall? Ein Test ist erst vollständig, wenn nicht nur das Menü, sondern die echte Wirtschaftswirkung überprüft wurde.
+Führt nach jeder größeren Änderung `python3 tests/test_stunde11.py` aus. Dokumentiert anschließend: Welche Datei wurde geändert? Welche Spielregel ist neu? Welche Taste oder Forschung aktiviert sie? Was ist der Testfall? Ein Test ist erst vollständig, wenn nicht nur das Menü, sondern die echte Wirtschaftswirkung überprüft wurde.

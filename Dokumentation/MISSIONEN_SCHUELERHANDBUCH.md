@@ -21,7 +21,7 @@ Die Missionen befinden sich in der Datei `missionen.py`. Der wichtigste Vorteil 
 | `missionen.py` | Missionsdaten, Prüfung, Fortschritt und Missionsmenü |
 | `main.py` | Liefert aktuelle Spielwerte und zahlt Belohnungen aus |
 | `spielstand.py` | Speichert und lädt Missionsfortschritt als JSON |
-| `test_stunde12.py` | Prüft Menü, Missionserfüllung und Speicherung |
+| `tests/test_stunde12.py` | Prüft Menü, Missionserfüllung und Speicherung |
 | `README.md` | Allgemeine Spielbeschreibung und Bedienung |
 
 Das Missionsmodul kennt die komplette Spielschleife nicht. Es bekommt von `main.py` nur ein Dictionary mit Zahlen. Dadurch bleibt der Code übersichtlich und die Schülerinnen und Schüler können die Missionen bearbeiten, ohne die gesamte Spielmechanik verstehen zu müssen.
@@ -305,8 +305,8 @@ Nach Änderungen sollte das Projekt aus dem Projektordner heraus getestet werden
 
 ```bash
 python3 -m py_compile main.py spiel_menue.py spielstand.py achievements.py missionen.py
-python3 test_stunde11.py
-python3 test_stunde12.py
+python3 tests/test_stunde11.py
+python3 tests/test_stunde12.py
 ```
 
 Bei einem erfolgreichen Lauf erscheinen:
