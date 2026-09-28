@@ -9,6 +9,11 @@ __pycache__/
 spielstand.json
 spielstand.json.tmp
 
+# ── Persoenliche Einstellungen (Lautstaerke, Grafik, FPS) ────────────────────
+# Das Einstellungsmenue schreibt eigene Werte - gehoeren nicht ins Repo.
+einstellungen.json
+einstellungen.json.tmp
+
 # ── Editor-, System- und Hilfsdateien ──────────────────────────────────────
 .vscode/
 .idea/

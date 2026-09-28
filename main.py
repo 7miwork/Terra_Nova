@@ -85,6 +85,7 @@ import ton          # Musik und Soundeffekte (Fortgeschrittener Kurs)
 import logistik     # Strassen, Netz und Versorgung (Fortgeschrittener Kurs)
 import gegner       # Feindliche Angriffe und Verteidigung (Fortgeschrittener Kurs)
 import panel        # Schwebende Info-Fenster (Fortgeschrittener Kurs)
+import einstellungen  # Einstellungsmenü mit eigener JSON-Datei
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -105,7 +106,7 @@ BILD_HOEHE          = 700
 SPIELNAME           = "Terra_Nova"
 # Der Fenstertitel ist genau der Spielname - ohne Zusatz wie "wie Final Earth 2".
 BILD_TITEL          = SPIELNAME
-BILDER_PRO_SEKUNDE  = 60     # FPS — wie flüssig das Spiel läuft
+BILDER_PRO_SEKUNDE  = 60     # FPS — wie flüssig das Spiel läuft (Standard; im Einstellungsmenü änderbar)
 
 # ── Karten-Einstellungen ────────────────────────────────────────────────────
 # Die Karte ist 60×40 Kacheln groß — wie in Final Earth 2 eine schöne
@@ -113,7 +114,7 @@ BILDER_PRO_SEKUNDE  = 60     # FPS — wie flüssig das Spiel läuft
 KACHEL_GROESSE  = 48         # Jede Kachel ist 48×48 Pixel groß
 KARTE_BREITE    = 60         # 60 Kacheln breit
 KARTE_HOEHE     = 40         # 40 Kacheln hoch
-KAMERA_SPEED    = 8          # Wie schnell die Kamera scrollt (in Pixeln)
+KAMERA_SPEED    = 8          # Kamera-Scrolltempo in Pixeln (Standard bei 60 FPS; im Einstellungsmenü änderbar)
 
 # ── Farben — Weltraum (Hintergrund) ───────────────────────────────────────
 # Der schwarze Weltraum-Hintergrund aus Stunde 1.
@@ -315,7 +316,7 @@ REGELWERKE = {
     },
 }
 
-# Mögliche Werte: hauptmenue, regelmenue, achievements, missionen, spiel, pause, sieg, niederlage
+# Mögliche Werte: hauptmenue, regelmenue, achievements, missionen, einstellungen, spiel, pause, sieg, niederlage
 spiel_status = "hauptmenue"
 _regel_auswahl = "standard"
 _regelmenue_ziel = "hauptmenue"
@@ -464,6 +465,8 @@ def karte_zeichnen():
     Kamera aber nur ungefähr 22 x 15 Kacheln. Die Start- und Endindizes sparen
     deshalb viele Schleifendurchläufe und unnötige Rechteckprüfungen.
     """
+    # Einstellung "Gitterlinien": lässt sich im Einstellungsmenü abschalten.
+    gitter_an = einstellungen.wert("gitter_an")
     erste_spalte = max(0, kamera_x // KACHEL_GROESSE)
     letzte_spalte = min(
         KARTE_BREITE,
@@ -485,7 +488,8 @@ def karte_zeichnen():
                 pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
             pygame.draw.rect(
                 fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
-            pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
+            if gitter_an:
+                pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
 
 
 # ── Gebäude zeichnen ────────────────────────────────────────────────────────
@@ -715,6 +719,8 @@ def neues_spiel_starten():
     spiel_status = "spiel"
     # Fortgeschrittener Kurs: Nach dem Endmenue darf die Musik wieder laufen.
     ton.musik_starten()
+    # War die Musik noch aus der Pause angehalten, läuft sie jetzt wieder.
+    ton.musik_fortsetzen()
 
 
 def spielstand_speichern():
@@ -962,14 +968,14 @@ def menue_titel():
 
 def hauptmenue_zeichnen():
     info = [
-        f"Aktive Regeln: {aktives_regelwerk()['name']}",
-        "Regeln: Sieg- und Niederlagebedingungen auswählen oder frei spielen.",
+        f"Aktive Regeln: {aktives_regelwerk()['name']} - mit R im Hauptmenü änderbar",
         "Im Spiel: ESC öffnet die Pause. A zeigt Achievements, M die Missionen.",
     ]
     optionen = [("neues_spiel", "Neues Spiel", "Enter"),
                 ("regelmenue", "Spielregeln auswählen", "R"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "M"),
+                ("einstellungen", "Einstellungen", "E"),
                 ("laden", "Spielstand laden", "L"),
                 ("beenden", "Spiel beenden", "Esc")]
     deaktiviert = set() if spielstand.existiert() else {"laden"}
@@ -1049,6 +1055,7 @@ def pausemenue_zeichnen():
                 ("speichern", "Spielstand speichern", "S"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "I"),
+                ("einstellungen", "Einstellungen", "E"),
                 ("hauptmenue", "Zum Hauptmenü", "M"),
                 ("beenden", "Spiel beenden", "Q")]
     spiel_menue.menu_zeichnen("PAUSE", "Das Spiel steht still.", optionen, info_zeilen=[
@@ -1071,6 +1078,11 @@ def _hauptmenue_aktion(aktion):
     global spiel_status, _regelmenue_ziel, _achievementmenue_ziel, _missionenmenue_ziel
     if aktion == "neues_spiel":
         neues_spiel_starten()
+        return True
+    if aktion == "einstellungen":
+        einstellungen.ziel_setzen("hauptmenue")
+        einstellungen.menue_oeffnen()
+        spiel_status = "einstellungen"
         return True
     if aktion == "regelmenue":
         _regelmenue_ziel = "hauptmenue"
@@ -1101,6 +1113,7 @@ def hauptmenue_verarbeiten():
                 ("regelmenue", "Spielregeln auswählen", "R"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "M"),
+                ("einstellungen", "Einstellungen", "E"),
                 ("laden", "Spielstand laden", "L"),
                 ("beenden", "Spiel beenden", "Esc")]
     for ereignis in pygame.event.get():
@@ -1124,6 +1137,8 @@ def hauptmenue_verarbeiten():
                 _missionenmenue_ziel = "hauptmenue"
                 spiel_status = "missionen"
                 return True
+            if ereignis.key == pygame.K_e:
+                return _hauptmenue_aktion("einstellungen")
             if ereignis.key == pygame.K_l and spielstand.existiert():
                 erfolg, meldung = spielstand_laden()
                 if not erfolg:
@@ -1202,6 +1217,29 @@ def missionenmenue_verarbeiten():
     return True
 
 
+def einstellungen_verarbeiten():
+    """Verarbeitet das Einstellungsmenü (Tastatur, Maus, Slider-Ziehen)."""
+    global spiel_status
+    for ereignis in pygame.event.get():
+        if ereignis.type == pygame.QUIT:
+            return False
+        if ereignis.type == pygame.KEYDOWN:
+            ergebnis = einstellungen.taste(ereignis.key)
+            if ergebnis == "zurueck":
+                spiel_status = einstellungen.ziel()
+                return True
+        elif ereignis.type == pygame.MOUSEBUTTONDOWN and ereignis.button == 1:
+            ergebnis = einstellungen.mausklick(ereignis.pos)
+            if ergebnis == "zurueck":
+                spiel_status = einstellungen.ziel()
+                return True
+        elif ereignis.type == pygame.MOUSEMOTION:
+            einstellungen.maus_ziehen(ereignis.pos, ereignis.buttons[0] == 1)
+        elif ereignis.type == pygame.MOUSEBUTTONUP and ereignis.button == 1:
+            einstellungen.maus_loslassen()
+    return True
+
+
 def pausemenue_verarbeiten():
     """Verarbeitet das ESC-Pausenmenü."""
     global spiel_status, _achievementmenue_ziel, _missionenmenue_ziel
@@ -1209,6 +1247,7 @@ def pausemenue_verarbeiten():
                 ("speichern", "Spielstand speichern", "S"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "I"),
+                ("einstellungen", "Einstellungen", "E"),
                 ("hauptmenue", "Zum Hauptmenü", "M"),
                 ("beenden", "Spiel beenden", "Q")]
     for ereignis in pygame.event.get():
@@ -1229,6 +1268,11 @@ def pausemenue_verarbeiten():
                 _missionenmenue_ziel = "pause"
                 spiel_status = "missionen"
                 return True
+            elif ereignis.key == pygame.K_e:
+                einstellungen.ziel_setzen("pause")
+                einstellungen.menue_oeffnen()
+                spiel_status = "einstellungen"
+                return True
             elif ereignis.key == pygame.K_m:
                 spiel_status = "hauptmenue"
                 menues_schliessen()
@@ -1241,6 +1285,11 @@ def pausemenue_verarbeiten():
                 return True
             if aktion == "speichern":
                 spielstand_speichern()
+            if aktion == "einstellungen":
+                einstellungen.ziel_setzen("pause")
+                einstellungen.menue_oeffnen()
+                spiel_status = "einstellungen"
+                return True
             if aktion == "achievements":
                 _achievementmenue_ziel = "pause"
                 spiel_status = "achievements"
@@ -1338,6 +1387,7 @@ def ereignisse_verarbeiten():
             # "neues Spiel", deshalb steht diese Pruefung nur hier.
             if ereignis.key == pygame.K_n:
                 an = ton.musik_umschalten()
+                einstellungen.setzen("musik_an", an)
                 hud.meldung_anzeigen(
                     "Musik " + ("eingeschaltet" if an else "ausgeschaltet") + ".")
                 continue
@@ -1635,6 +1685,11 @@ def ereignisse_verarbeiten():
     # ── Schritt 2: Gehaltene WASD-Tasten prüfen ─────────────────────────
     # Pfeil links/rechts sind in Stunde 11 für die Gebäude-Unterauswahl
     # reserviert. WASD bleibt deshalb die konfliktfreie Kamerasteuerung.
+    # Das Einstellungsmenü kann FPS und Kamera-Tempo geändert haben: pro
+    # Frame neu berechnet - bei weniger FPS mehr Pixel pro Frame, damit
+    # die Kamera trotzdem gleich schnell über den Bildschirm scrollt.
+    KAMERA_SPEED = (einstellungen.wert("kamera_tempo") * 60
+                    // max(1, einstellungen.wert("fps")))
     gedrueckte_tasten = pygame.key.get_pressed()
     if gedrueckte_tasten[pygame.K_a]:
         kamera_x -= KAMERA_SPEED
@@ -1672,6 +1727,12 @@ def ereignisse_verarbeiten():
 def spielwelt_zeichnen():
     """Zeichnet die aktuelle Welt und alle zustandsabhängigen Overlays."""
     panel.frame_start()      # Merkliste der schwebenden Fenster leeren
+    if spiel_status == "einstellungen" and einstellungen.ziel() == "hauptmenue":
+        # Von aus dem Hauptmenü geöffnet: da existiert noch keine Spielwelt
+        # unter dem Overlay - deshalb nur der Sternenhintergrund.
+        hintergrund_zeichnen()
+        einstellungen.menu_zeichnen()
+        return
     hintergrund_zeichnen()
     if spiel_status == "hauptmenue":
         hauptmenue_zeichnen()
@@ -1725,6 +1786,8 @@ def spielwelt_zeichnen():
         pausemenue_zeichnen()
     elif spiel_status in ("sieg", "niederlage"):
         endmenue_zeichnen()
+    elif spiel_status == "einstellungen":
+        einstellungen.menu_zeichnen()
 
 
 def spiel_starten():
@@ -1744,13 +1807,17 @@ def spiel_starten():
     hud.hud_initialisieren(fenster)
     menu.menu_initialisieren(fenster)
     spiel_menue.menue_initialisieren(fenster)
+    einstellungen.menue_initialisieren(fenster)
     achievements.initialisieren(fenster)
     missionen.initialisieren(fenster)
     forschung.forschung_initialisieren(fenster)
     handel.handel_initialisieren(fenster)
     # Fortgeschrittener Kurs: Ton einschalten und Musik starten.
     # Ohne Audiogeraet sind beide Aufrufe wirkungslos - das Spiel laeuft weiter.
+    # Einstellungen aus der JSON-Datei holen und auf den Ton anwenden.
+    einstellungen.laden()
     ton.initialisieren()
+    einstellungen.alle_anwenden()
     ton.musik_starten()
     logistik.initialisieren(fenster)
     gegner.initialisieren(fenster)
@@ -1771,6 +1838,8 @@ def spiel_starten():
             laeuft = achievementsmenue_verarbeiten()
         elif spiel_status == "missionen":
             laeuft = missionenmenue_verarbeiten()
+        elif spiel_status == "einstellungen":
+            laeuft = einstellungen_verarbeiten()
         elif spiel_status == "spiel":
             laeuft = ereignisse_verarbeiten()
         elif spiel_status == "pause":
@@ -1790,7 +1859,7 @@ def spiel_starten():
         #   spiel_geschwindigkeit = 0 → pausiert
         if spiel_status == "spiel" and spiel_geschwindigkeit > 0:
             tick_zaehler += 1
-            if tick_zaehler >= 60 // spiel_geschwindigkeit:
+            if tick_zaehler >= max(1, einstellungen.wert("fps") // spiel_geschwindigkeit):
                 tick_zaehler = 0
                 ressourcen.ressourcen_produzieren(ressourcen_dict,
                                                    liste_gebaeude,
@@ -1807,7 +1876,7 @@ def spiel_starten():
         spielwelt_zeichnen()
         pygame.display.flip()
 
-        uhr.tick(BILDER_PRO_SEKUNDE)
+        uhr.tick(einstellungen.wert("fps"))
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1847,6 +1916,7 @@ def hilfe_zeichnen():
         "V            — Logistik-Ansicht (Strassennetz) ein-/ausblenden",
         "S            — Im Pausenmenü den Spielstand speichern",
         "L            — Im Hauptmenü den Spielstand laden",
+        "E            — Einstellungen im Hauptmenü und in der Pause",
         "R            — Im Hauptmenü Spielregeln auswählen",
         "A            — Achievements anzeigen (Haupt-/Pausenmenü)",
         "M            — Missionszentrale im Hauptmenü öffnen",

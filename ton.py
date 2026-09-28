@@ -83,6 +83,7 @@ ORDNER_NAME = "sounds"
 
 _mixer_bereit = False        # True, wenn Pygame Toene abspielen kann
 _musik_an = True             # Merker der Musik-Taste N
+_musik_paussiert = False     # True, solange die Musik in der Pause angehalten ist
 _musik_laeuft = False        # Läuft gerade Musik?
 _effekte = {}                # schon geladene Sounds (Name → pygame.mixer.Sound)
 _letzte_startzeit = {}       # Name → Zeitpunkt des letzten Starts in Millisekunden
@@ -226,6 +227,29 @@ def abspielzaehler(name):
 # BLOCK 5: HINTERGRUNDMUSIK
 # ═════════════════════════════════════════════════════════════════════════════
 
+def musik_lautstaerke_setzen(wert):
+    """Setzt die Musik-Lautstärke (0.0–1.0) und wendet sie sofort an.
+
+    Wird vom Einstellungsmenü aufgerufen. Die laufende Musik merkt sich den
+    neuen Wert ohne Neustart.
+    """
+    global MUSIK_LAUTSTAERKE
+    MUSIK_LAUTSTAERKE = max(0.0, min(1.0, float(wert)))
+    if _mixer_bereit:
+        try:
+            pygame.mixer.music.set_volume(MUSIK_LAUTSTAERKE)
+        except (pygame.error, AttributeError):
+            pass
+
+
+def effekt_lautstaerke_setzen(wert):
+    """Setzt die Effekt-Lautstärke (0.0–1.0) für alle geladenen Sounds."""
+    global EFFEKT_LAUTSTAERKE
+    EFFEKT_LAUTSTAERKE = max(0.0, min(1.0, float(wert)))
+    for klang in _effekte.values():
+        klang.set_volume(EFFEKT_LAUTSTAERKE)
+
+
 def musik_starten():
     """Startet die Hintergrundmusik als Endlosschleife (wenn Musik erlaubt ist)."""
     global _musik_laeuft
@@ -245,6 +269,10 @@ def musik_starten():
         pygame.mixer.music.load(pfad)
         pygame.mixer.music.set_volume(MUSIK_LAUTSTAERKE)
         pygame.mixer.music.play(-1)      # -1 = immer wieder von vorne (Loop)
+        if _musik_paussiert:
+            # Die Pause der letzten Runde gilt weiter: Musik bleibt angehalten,
+            # bis musik_fortsetzen() sie beim Fortsetzen wieder startet.
+            pygame.mixer.music.pause()
     except (pygame.error, OSError):
         return False
     _musik_laeuft = True
@@ -265,22 +293,46 @@ def musik_stoppen():
 
 def musik_pausieren():
     """Haelt die Musik an, ohne sie zu vergessen (fuer das Pausenmenue)."""
+    global _musik_paussiert
     if not _mixer_bereit or not _musik_laeuft:
         return
     try:
         pygame.mixer.music.pause()
+        _musik_paussiert = True
     except (pygame.error, AttributeError):
         pass
 
 
 def musik_fortsetzen():
     """Setzt eine mit musik_pausieren() angehaltene Musik wieder fort."""
+    global _musik_paussiert
     if not _mixer_bereit or not _musik_an or not _musik_laeuft:
         return
     try:
         pygame.mixer.music.unpause()
+        _musik_paussiert = False
     except (pygame.error, AttributeError):
         pass
+
+
+def musik_an_setzen(an):
+    """Schaltet die Musik explizit an oder aus (Einstellungsmenü).
+
+    Merkt sich, ob die Musik in der Pause angehalten ist: Beim erneuten
+    Einschalten bleibt sie dann angehalten, bis die Pause endet.
+
+    Rückgabe: True, wenn die Musik danach an sein soll.
+    """
+    global _musik_an
+    an = bool(an)
+    if an == _musik_an:
+        return _musik_an
+    _musik_an = an
+    if an:
+        musik_starten()
+    else:
+        musik_stoppen()
+    return _musik_an
 
 
 def musik_umschalten():
@@ -329,7 +381,8 @@ def zustand_importieren(daten):
 
 def zustand_zuruecksetzen():
     """Setzt Musik und Effekt-Gedaechtnis auf den Startzustand zurueck."""
-    global _musik_an, _musik_laeuft
+    global _musik_an, _musik_laeuft, _musik_paussiert
+    _musik_paussiert = False
     _musik_an = True
     _musik_laeuft = False
     _letzte_startzeit.clear()
