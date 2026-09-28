@@ -80,7 +80,7 @@ Die Überlappungen aus dem Screenshot sind behoben:
   versehentlich ein Gebäude unter einem Panel.
 - **Test:** `test_fortgeschritten_panels.py` prüft Anordnung, Ziehen,
   Klemmen, Minimieren, Schließen, Klicken und das Leisten-Layout.
-  Zusätzlich `Temp/vorschau.py` rendert ein PNG zur Sichtprüfung.
+  Zusätzlich `unnoetig/vorschau.py` rendert ein PNG zur Sichtprüfung.
 
 **Offene Idee für euch:** Fenster-Transparenz einstellbar machen oder
 Fensterinhalte per Rechtsklick umschalten (z. B. Übersicht → nur Personal).

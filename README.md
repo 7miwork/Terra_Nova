@@ -16,6 +16,16 @@ Zeile zu ändern.
 Voraussetzungen: Python 3.10+, pygame 2.x. Ohne Audiogerät läuft das Spiel
 ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 
+## Ordnerstruktur
+
+| Ort | Inhalt |
+|---|---|
+| `main.py` + Module | Der Spielcode — direkt hier starten mit `python main.py` |
+| `bilder/`, `sounds/` | Grafiken und Töne, die das Spiel lädt |
+| `test_*.py`, `check.py` | Selbsttests (siehe unten) |
+| **`Dokumentation/`** | Alle Handbücher und Anleitungen (.md), PDFs unter `Dokumentation/PDF/`, Erklärbilder unter `Dokumentation/Erklaer Bilder/` |
+| **`unnoetig/`** | Ablage für Dateien, die das Spiel nicht braucht (Altlasten, Einmal-Skripte) — wird nicht ins Repository mitgeschrieben |
+
 ## Steuerung (Auszug, vollständig mit Taste H im Spiel)
 
 | Taste | Funktion |
@@ -49,7 +59,7 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | 4 | Gegner und Verteidigung | `gegner.py`, neue Gebäude 21–23 |
 | 5 | Dokumentation und Abnahme | README, Handbücher, `check.py` |
 
-Details für Schülerinnen und Schüler: **FORTGESCHRITTEN_SCHUELERHANDBUCH.md**.
+Details für Schülerinnen und Schüler: **Dokumentation/FORTGESCHRITTEN_SCHUELERHANDBUCH.md**.
 
 ## Verteidigung (Phase 4) — die Regeln in Kürze
 
@@ -111,7 +121,7 @@ Alte Spielstände bleiben ladbar: Neue Felder (`gegner`, `verteidiger`,
     python sounds_erzeugen.py   # Standard-Sounds und Hintergrundmusik
 
 Die erzeugten Dateien liegen bei — die Skripte braucht man nur zum
-Neuerzeugen oder zum eigenen Anpassen (Anleitungen: `BILDER_ANLEITUNG.md`).
+Neuerzeugen oder zum eigenen Anpassen (Anleitungen: `Dokumentation/BILDER_ANLEITUNG.md`).
 
 ## Repository
 

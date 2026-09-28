@@ -16,6 +16,8 @@ Thumbs.db
 desktop.ini
 # Temporaere Hilfs- und Testskripte aus dem Unterricht (nur lokal noetig)
 Temp/
+# Nicht spielrelevante Dateien (ehemals Temp/, Altlasten) — nur lokal
+unnoetig/
 
 # ── Virtuelle Umgebungen ───────────────────────────────────────────────────
 .venv/
