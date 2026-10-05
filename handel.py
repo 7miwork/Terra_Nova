@@ -24,6 +24,12 @@ _marktplatz_aktiv = False
 _handelsaktionen = 0
 
 
+# Balancing: Der Tausch kostet 3 Einheiten fuer 1 Einheit. Mit dem
+# vorherigen 2:1-Verhaeltnis liess sich der ganze Ueberschuss billig in
+# die knappen Ressourcen umrechnen - das war eine eigene Produktionskette.
+TAUSCH_VERHALTNIS = 3
+
+
 def handel_initialisieren(fenster_obj):
     global _fenster
     _fenster = fenster_obj
@@ -149,13 +155,17 @@ def ressourcen_tauschen(ressourcen_dict, von, zu):
     if not forschung.ist_technologie_erforscht("ressourcenhandel"):
         hud.meldung_anzeigen("Ressourcenhandel ist noch nicht erforscht.")
         return False
-    if von == zu or ressourcen_dict.get(von, 0) < 2:
-        hud.meldung_anzeigen("Für einen Tausch werden 2 Einheiten der Ausgangsressource benötigt.")
+    if von == zu or ressourcen_dict.get(von, 0) < TAUSCH_VERHALTNIS:
+        hud.meldung_anzeigen(
+            f"Für einen Tausch werden {TAUSCH_VERHALTNIS} Einheiten "
+            "der Ausgangsressource benötigt.")
         return False
-    ressourcen_dict[von] -= 2
+    ressourcen_dict[von] -= TAUSCH_VERHALTNIS
     ressourcen_dict[zu] = ressourcen_dict.get(zu, 0) + 1
     handel_aktion()
-    hud.meldung_anzeigen(f"Tausch durchgeführt: 2 {_ROHSTOFF_NAMEN[von]} gegen 1 {_ROHSTOFF_NAMEN[zu]}.")
+    hud.meldung_anzeigen(
+        f"Tausch durchgeführt: {TAUSCH_VERHALTNIS} {_ROHSTOFF_NAMEN[von]} "
+        f"gegen 1 {_ROHSTOFF_NAMEN[zu]}.")
     ton.sound_abspielen("handel")
     return True
 
@@ -190,11 +200,11 @@ def handelsmenue_zeichnen(ressourcen_dict):
     gross = pygame.font.Font(None, 34)
     klein = pygame.font.Font(None, 22)
     _fenster.blit(gross.render("HANDEL  (E schließt)", True, (255, 255, 255)), (30, 24))
-    _fenster.blit(klein.render("Kurs: 2 Einheiten gegen 1 Einheit | Marktplatz oder Handelsposten nötig", True, (160, 220, 220)), (30, 65))
+    _fenster.blit(klein.render(f"Kurs: {TAUSCH_VERHALTNIS} Einheiten gegen 1 Einheit | Marktplatz oder Handelsposten nötig", True, (160, 220, 220)), (30, 65))
     zeilen = [
-        "Q: 2 Holz → 1 Stein       W: 2 Stein → 1 Holz",
-        "R: 2 Nahrung → 1 Energie  T: 2 Energie → 1 Nahrung",
-        "Y: 2 Kohle → 1 Eisen       U: 2 Eisen → 1 Gold",
+        f"Q: {TAUSCH_VERHALTNIS} Holz → 1 Stein       W: {TAUSCH_VERHALTNIS} Stein → 1 Holz",
+        f"R: {TAUSCH_VERHALTNIS} Nahrung → 1 Energie  T: {TAUSCH_VERHALTNIS} Energie → 1 Nahrung",
+        f"Y: {TAUSCH_VERHALTNIS} Kohle → 1 Eisen       U: {TAUSCH_VERHALTNIS} Eisen → 1 Gold",
         "",
     ]
     y = 105

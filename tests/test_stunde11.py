@@ -101,7 +101,12 @@ forschung._erforschte_technologien.add("ressourcenhandel")
 handel.handel_tick(werte, [{"typ": 5}])
 werte["holz"], werte["stein"] = 10, 50
 assert handel.ressourcen_tauschen(werte, "holz", "stein")
-assert werte["holz"] == 8 and werte["stein"] == 51
+# Balancing: Der Tausch kostet 3 Einheiten fuer 1 (vorher 2:1).
+assert werte["holz"] == 7 and werte["stein"] == 51
+# Mit 2 Einheiten im Lager geht der Tausch nicht mehr.
+werte["holz"] = 2
+assert not handel.ressourcen_tauschen(werte, "holz", "stein")
+assert werte["holz"] == 2 and werte["stein"] == 51
 
 pygame.quit()
 print("STUNDE11_TESTS_OK")

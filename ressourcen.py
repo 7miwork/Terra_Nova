@@ -7,6 +7,12 @@ import forschung
 _wirtschafts_tick = 0
 _lager_bonus_aktiv = False
 _prestige_bonus_aktiv = False
+# Zufallsereignisse (ereignisse.py) koennen die Produktion stoeren. Die
+# Stoerung ist ein reiner Zahlenwert in Ticks, damit Speichern/Laden und
+# Tests ohne pygame funktionieren.
+SYSTEMAUSFALL_FAKTOR = 0.70    # Systemausfall: 30 Prozent weniger Energie
+BESCHAEDIGT_FAKTOR = 0.20      # Meteoritenschauer: 80 Prozent weniger Produktion
+_energie_stoerung = 0
 
 
 def zustand_exportieren():
@@ -15,12 +21,14 @@ def zustand_exportieren():
         "wirtschafts_tick": _wirtschafts_tick,
         "lager_bonus_aktiv": _lager_bonus_aktiv,
         "prestige_bonus_aktiv": _prestige_bonus_aktiv,
+        "energie_stoerung": _energie_stoerung,
     }
 
 
 def zustand_importieren(daten):
     """Stellt interne Wirtschaftswerte aus einem JSON-Dictionary wieder her."""
     global _wirtschafts_tick, _lager_bonus_aktiv, _prestige_bonus_aktiv
+    global _energie_stoerung
     daten = daten if isinstance(daten, dict) else {}
     try:
         _wirtschafts_tick = max(0, int(daten.get("wirtschafts_tick", 0)))
@@ -28,6 +36,52 @@ def zustand_importieren(daten):
         _wirtschafts_tick = 0
     _lager_bonus_aktiv = bool(daten.get("lager_bonus_aktiv", False))
     _prestige_bonus_aktiv = bool(daten.get("prestige_bonus_aktiv", False))
+    energie_stoerung_setzen(daten.get("energie_stoerung", 0))
+
+
+def energie_stoerung_setzen(ticks):
+    """Setzt die Energiestoerung in Ticks (0 hebt sie auf).
+
+    Wird vom Ereignismodul benutzt: Systemausfall = viele Ticks, Reparatur = 0.
+    """
+    global _energie_stoerung
+    try:
+        _energie_stoerung = max(0, int(ticks))
+    except (TypeError, ValueError):
+        _energie_stoerung = 0
+
+
+def energie_stoerung_rest():
+    """Wie viele Ticks die Energiestoerung noch laeuft (0 = keine)."""
+    return _energie_stoerung
+
+
+def energie_stoerung_aktiv():
+    return _energie_stoerung > 0
+
+
+def gebaeude_beschaedigen(gebaeude, ticks):
+    """Markiert ein Gebaeude als beschaedigt (Meteoritenschauer)."""
+    try:
+        gebaeude["beschaedigt_rest"] = max(0, int(ticks))
+    except (TypeError, ValueError):
+        gebaeude["beschaedigt_rest"] = 0
+
+
+def gebaeude_beschaedigt(gebaeude):
+    return gebaeude.get("beschaedigt_rest", 0) > 0
+
+
+def _schaden_ticken(liste_gebaeude):
+    """Zaehlt die Beschaedigung aller Gebaeude um einen Tick herunter."""
+    for gebaeude in liste_gebaeude:
+        rest = gebaeude.get("beschaedigt_rest", 0)
+        if isinstance(rest, (int, float)) and rest > 0:
+            rest = rest - 1
+            if rest <= 0:
+                gebaeude.pop("beschaedigt_rest", None)
+            else:
+                gebaeude["beschaedigt_rest"] = rest
 
 
 RESSOURCEN_NAMEN = {
@@ -101,7 +155,8 @@ GEBAEUDE_WIRTSCHAFT = [
     {"baukosten": {"gold": 15, "energie": 10}, "produktion": {"stein": 5},
      "verbrauch": {"energie": 3}, "personalbedarf": 2, "max_anzahl": None,
      "freischaltung": None, "grosse_anlage": False},
-    {"baukosten": {"gold": 30, "energie": 15}, "produktion": {"gold": 12},
+    # Balancing: Marktplatz 12 -> 10 Gold (Gold war sehr stark).
+    {"baukosten": {"gold": 30, "energie": 15}, "produktion": {"gold": 10},
      "verbrauch": {"stein": 5}, "personalbedarf": 1, "max_anzahl": None,
      "freischaltung": {"typ": "ressource", "ressource": "bevoelkerung", "menge": 5}, "grosse_anlage": False},
     {"baukosten": {"gold": 20, "holz": 15, "stein": 10}, "produktion": {"bevoelkerung": 1},
@@ -116,8 +171,10 @@ GEBAEUDE_WIRTSCHAFT = [
      "freischaltung": {"typ": "forschung", "technologie": "minenbau"}, "grosse_anlage": True},
     {"baukosten": {"stein": 2}, "produktion": {}, "verbrauch": {}, "personalbedarf": 0,
      "max_anzahl": None, "freischaltung": None, "grosse_anlage": False},
+    # Balancing: Der Fusionsreaktor war sehr stark (+25 Energie). 20 Energie
+    # bleiben stark, kosten aber spuerbar Kohle und Personal.
     {"baukosten": {"gold": 100, "energie": 20, "stein": 40, "eisen": 20},
-     "produktion": {"energie": 25}, "verbrauch": {"kohle": 5}, "personalbedarf": 4,
+     "produktion": {"energie": 20}, "verbrauch": {"kohle": 5}, "personalbedarf": 4,
      "max_anzahl": None, "freischaltung": {"typ": "forschung", "technologie": "fusionsreaktor"}, "grosse_anlage": True},
     {"baukosten": {"gold": 60, "energie": 20, "eisen": 10}, "produktion": {"roboter": 1},
      "verbrauch": {"energie": 2, "kohle": 1}, "personalbedarf": 2, "max_anzahl": None,
@@ -127,7 +184,9 @@ GEBAEUDE_WIRTSCHAFT = [
      "verbrauch": {"energie": 3, "eisen": 2, "kohle": 2}, "personalbedarf": 3, "max_anzahl": None,
      "freischaltung": {"typ": "forschung", "technologie": "stahlverarbeitung"}, "grosse_anlage": True},
     # 13 Gewächshaus als zweite Nahrungsquelle
-    {"baukosten": {"gold": 45, "energie": 20, "eisen": 5}, "produktion": {"nahrung": 8},
+    # Balancing: Gewaechshaus 8 -> 6 Nahrung, weil Nahrung im spaeten
+    # Spielverlauf ohnehin im Ueberfluss vorhanden ist.
+    {"baukosten": {"gold": 45, "energie": 20, "eisen": 5}, "produktion": {"nahrung": 6},
      "verbrauch": {"energie": 3}, "personalbedarf": 2, "max_anzahl": None,
      "freischaltung": {"typ": "forschung", "technologie": "gewaechshausbau"}, "grosse_anlage": False},
     # 14 Lagerhaus erhöht mit der Forschung die Speichergrenzen.
@@ -423,6 +482,10 @@ def _produktion_multiplikator(typ_index, ress_name):
         faktor *= 1.15
     if typ_index == 12 and forschung.ist_technologie_erforscht("stahlverarbeitung_plus"):
         faktor *= 1.20
+    # Zufallsereignis Systemausfall: waehrend der Stoerung liefern alle
+    # Energiegebaeude nur noch 70 Prozent ihrer normalen Leistung.
+    if ress_name == "energie" and _energie_stoerung > 0:
+        faktor *= SYSTEMAUSFALL_FAKTOR
     return faktor
 
 
@@ -448,6 +511,10 @@ def ressourcen_produzieren(ressourcen_dict, liste_gebaeude, karten_daten=None):
     _lager_bonus_aktiv = any(g["typ"] == 14 for g in liste_gebaeude)
     zufriedenheit_aktualisieren(ressourcen_dict, liste_gebaeude)
     _prestige_bonus_aktiv = any(g["typ"] == 17 for g in liste_gebaeude)
+    # Zufallsereignisse: Meteoritenschauer und Systemausfall laufen ab.
+    _schaden_ticken(liste_gebaeude)
+    if _energie_stoerung > 0:
+        energie_stoerung_setzen(_energie_stoerung - 1)
 
     nahrungsverbrauch = ressourcen_dict.get("bevoelkerung", 0) * 0.05
     if forschung.ist_technologie_erforscht("hoeher_saettigende_nahrung"):
@@ -522,8 +589,14 @@ def ressourcen_produzieren(ressourcen_dict, liste_gebaeude, karten_daten=None):
             aktive_labore += 1
 
         effizient_bonus = 1.15 if forschung.ist_technologie_erforscht("anpassende_architektur") else 1.0
+        # Meteoritenschauer: Ein getroffenes Gebaeude produziert nur noch
+        # 20 Prozent (also 80 Prozent weniger) bis der Schaden abgelaufen ist.
+        schaden_faktor = (BESCHAEDIGT_FAKTOR
+                          if gebaeude.get("beschaedigt_rest", 0) > 0 else 1.0)
         for ress_name, menge in produktion.items():
-            faktor = effizient_bonus * _produktion_multiplikator(typ_index, ress_name)
+            faktor = (effizient_bonus
+                      * _produktion_multiplikator(typ_index, ress_name)
+                      * schaden_faktor)
             ressourcen_dict[ress_name] = ressourcen_dict.get(ress_name, 0) + menge * faktor
         if typ_index == 3 and forschung.ist_technologie_erforscht("forstwirtschaft"):
             gebaeude["wald_vorrat"] = max(0, gebaeude.get("wald_vorrat", 30) - 1)

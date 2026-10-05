@@ -11,9 +11,36 @@
 
 ### Neue Vorschlaege fuer die naechste Stunde:
 
-(Platzhalter — hier koennen die Schueler ihre neuen Ideen eintragen.)
+#### Balancing (Schuelerwunschliste) — alle umgesetzt ✅
 
-- ...
+- [x] Fusionsreaktor schwächer: 25 → **20 Energie**
+- [x] Gewächshaus schwächer: 8 → **6 Nahrung** (wird später zur Überschussressource)
+- [x] Marktplatz schwächer: 12 → **10 Gold**
+- [x] Handel teurer: Tausch von **2:1 auf 3:1** (Konstante `TAUSCH_VERHALTNIS`),
+      damit der Handel nicht wie eine eigene Produktionskette wirkt
+
+#### Zufallsereignisse (Vorschläge zur Erweiterung) — alle umgesetzt ✅
+
+- [x] **Systemausfall**: 30 % weniger Energie für 3 Minuten (180 Ticks).
+      Reparatur gegen **100 Gold** behebt ihn sofort (Taste **R**).
+- [x] **Unbekanntes Raumschiff**: bis zu **75 Einheiten je Ressource** einsetzen —
+      50 % Chance auf das Doppelte, 50 % auf den Totalverlust.
+- [x] **Meteoritenschauer**: 10 zufällige Gebäude treffen, 3 Minuten lang nur
+      noch 20 % Produktion (80 % weniger).
+
+#### Achievements — drei neue Ziele ✅
+
+- [x] 100 Gebäude gebaut (zählt über **alle** Partien)
+- [x] 1000 Forschungspunkte erzeugt (über alle Partien)
+- [x] erste Stahlproduktion
+
+#### Statistik im Anfangsmenü ✅
+
+- [x] Hauptmenü → „Gesamtstatistik“ (Taste **T**): gespielte, gewonnene und
+      verlorene Partien, Spielzeit, Gebäude, Forschungspunkte, Handelsaktionen,
+      Technologien, größte Kolonie, Achievements und die Häufigkeit der
+      Zufallsereignisse — jeweils „insgesamt“ und „diese Partie“.
+      Liegt in `statistik.json` und steht nicht im Repository.
 
 
 ### Umgesetzt in der aktuellen Version

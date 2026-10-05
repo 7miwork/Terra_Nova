@@ -86,6 +86,8 @@ import logistik     # Strassen, Netz und Versorgung (Fortgeschrittener Kurs)
 import gegner       # Feindliche Angriffe und Verteidigung (Fortgeschrittener Kurs)
 import panel        # Schwebende Info-Fenster (Fortgeschrittener Kurs)
 import einstellungen  # Einstellungsmenü mit eigener JSON-Datei
+import ereignisse    # Zufallsereignisse (Systemausfall, Raumschiff, Meteoritenschauer)
+import statistik     # Dauerhafte Spielstatistik (Hauptmenü)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -584,7 +586,8 @@ def achievements_pruefen():
         ressourcen_dict.get("wirtschafts_tick", 0),
         spiel_status,
         {name: ressourcen.maximaler_speicher(name)
-         for name in ressourcen.SPEICHER_BASIS})
+         for name in ressourcen.SPEICHER_BASIS},
+        profil=statistik.profil())
     if neue:
         erster_titel = achievements.titel(neue[0])
         zusatz = f" (+{achievements.eintrag(neue[0])['punkte']} Punkte)"
@@ -621,6 +624,19 @@ def gegner_ereignis_verarbeiten(ereignis):
         hud.meldung_anzeigen(
             "Kolonie ausgeraubt! 30 Prozent der Rohstoffe weg "
             f"({verluste.get('verteidiger', 0)} Verteidiger gefallen)")
+
+
+def ereignis_meldung_verarbeiten(ereignis):
+    """Zeigt die Textmeldung aus ereignisse.py im HUD an.
+
+    Die Logik und die Sound-Effekte liegen komplett im Ereignismodul -
+    hier steht nur noch der Text.
+    """
+    if not isinstance(ereignis, dict):
+        return
+    text = ereignis.get("text")
+    if text:
+        hud.meldung_anzeigen(text)
 
 
 def menues_schliessen():
@@ -716,6 +732,9 @@ def neues_spiel_starten():
     ressourcen.zustand_importieren({})
     # Fortgeschrittener Kurs (Gegner): neues Spiel = Friedenszeit von vorn.
     gegner.zustand_zuruecksetzen()
+    # Zufallsereignisse starten neu, die Statistik zaehlt die Partie.
+    ereignisse.ereignisse_zuruecksetzen()
+    statistik.neue_partie()
     spiel_status = "spiel"
     # Fortgeschrittener Kurs: Nach dem Endmenue darf die Musik wieder laufen.
     ton.musik_starten()
@@ -834,6 +853,7 @@ def spielstatus_pruefen():
         spiel_ende_titel = "KOLONIE GERETTET"
         spiel_ende_grund = (f"Deine Kolonie hat {int(bevoelkerung)} Bewohner "
                             f"und ein Koloniezentrum erreicht ({regel['name']}).")
+        statistik.partie_beendet("sieg")
         achievements_pruefen()
         menues_schliessen()
         return
@@ -860,6 +880,8 @@ def spielstatus_pruefen():
         ton.sound_abspielen("niederlage")
         spiel_ende_titel = "KOLONIE VERLOREN"
         spiel_ende_grund = "Die Nahrung ist zu lange auf 0 gefallen."
+        statistik.partie_beendet("niederlage")
+        statistik.partie_beendet("niederlage")
         menues_schliessen()
     elif _null_energie_ticks >= regel["niederlage_ticks"]:
         spiel_status = "niederlage"
@@ -867,6 +889,8 @@ def spielstatus_pruefen():
         ton.sound_abspielen("niederlage")
         spiel_ende_titel = "KOLONIE VERLOREN"
         spiel_ende_grund = "Die Energie ist zu lange auf 0 gefallen."
+        statistik.partie_beendet("niederlage")
+        statistik.partie_beendet("niederlage")
         menues_schliessen()
     achievements_pruefen()
 
@@ -975,6 +999,7 @@ def hauptmenue_zeichnen():
                 ("regelmenue", "Spielregeln auswählen", "R"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "M"),
+                ("statistik", "Gesamtstatistik", "T"),
                 ("einstellungen", "Einstellungen", "E"),
                 ("laden", "Spielstand laden", "L"),
                 ("beenden", "Spiel beenden", "Esc")]
@@ -1096,6 +1121,9 @@ def _hauptmenue_aktion(aktion):
         _missionenmenue_ziel = "hauptmenue"
         spiel_status = "missionen"
         return True
+    if aktion == "statistik":
+        spiel_status = "statistik"
+        return True
     if aktion == "laden":
         erfolg, meldung = spielstand_laden()
         if not erfolg:
@@ -1113,6 +1141,7 @@ def hauptmenue_verarbeiten():
                 ("regelmenue", "Spielregeln auswählen", "R"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "M"),
+                ("statistik", "Gesamtstatistik", "T"),
                 ("einstellungen", "Einstellungen", "E"),
                 ("laden", "Spielstand laden", "L"),
                 ("beenden", "Spiel beenden", "Esc")]
@@ -1137,6 +1166,8 @@ def hauptmenue_verarbeiten():
                 _missionenmenue_ziel = "hauptmenue"
                 spiel_status = "missionen"
                 return True
+            if ereignis.key == pygame.K_t:
+                return _hauptmenue_aktion("statistik")
             if ereignis.key == pygame.K_e:
                 return _hauptmenue_aktion("einstellungen")
             if ereignis.key == pygame.K_l and spielstand.existiert():
@@ -1213,6 +1244,23 @@ def missionenmenue_verarbeiten():
         if (ereignis.type == pygame.MOUSEBUTTONDOWN and ereignis.button == 1 and
                 missionen.zurueck_rect().collidepoint(ereignis.pos)):
             spiel_status = _missionenmenue_ziel
+            return True
+    return True
+
+
+def statistikmenue_verarbeiten():
+    """Verarbeitet die Rueckkehr aus der Gesamtstatistik."""
+    global spiel_status
+    for ereignis in pygame.event.get():
+        if ereignis.type == pygame.QUIT:
+            return False
+        if ereignis.type == pygame.KEYDOWN:
+            if ereignis.key in (pygame.K_ESCAPE, pygame.K_t, pygame.K_RETURN, pygame.K_SPACE):
+                spiel_status = "hauptmenue"
+                return True
+        if (ereignis.type == pygame.MOUSEBUTTONDOWN and ereignis.button == 1 and
+                statistik.zurueck_rect().collidepoint(ereignis.pos)):
+            spiel_status = "hauptmenue"
             return True
     return True
 
@@ -1359,6 +1407,10 @@ def ereignisse_verarbeiten():
             return False
         
         if ereignis.type == pygame.KEYDOWN:
+            # Zufallsereignisse haben Vorrang: Raumschiff-Fenster (darin
+            # sind die Buchstaben Q..X die Auswahl) und die Reparatur mit R.
+            if ereignisse.taste(ereignis.key, ressourcen_dict):
+                continue
             if ereignis.key in (pygame.K_ESCAPE, pygame.K_p):
                 pause_umschalten()
                 return True
@@ -1641,6 +1693,7 @@ def ereignisse_verarbeiten():
                                 f"Hinweis: {gebaeude_name} hat keine "
                                 "Strassenanbindung - baue eine Strasse zur Basis.")
                         achievements.gebaeude_gebaut(gebaeude_auswahl)
+                        statistik.gebaeude_gebaut()
                         achievements_pruefen()
                         missionen.gebaeude_gebaut(gebaeude_auswahl)
                         missionen_pruefen()
@@ -1746,6 +1799,9 @@ def spielwelt_zeichnen():
     if spiel_status == "missionen":
         missionen_zeichnen()
         return
+    if spiel_status == "statistik":
+        statistik.menu_zeichnen()
+        return
 
     karte_zeichnen()
     # gebaeude und logistik zeichnen die Welt — deshalb die um das HUD
@@ -1780,6 +1836,8 @@ def spielwelt_zeichnen():
     forschung.forschung_menu_zeichnen(ressourcen_dict,
                                        gebaeude.GEBAEUDE_TYPEN)
     handel.handelsmenue_zeichnen(ressourcen_dict)
+    # Zufallsereignisse: Raumschiff-Fenster liegt ueber allem anderen.
+    ereignisse.menu_zeichnen(ressourcen_dict)
     if _hilfe_offen:
         hilfe_zeichnen()
     if spiel_status == "pause":
@@ -1808,6 +1866,9 @@ def spiel_starten():
     menu.menu_initialisieren(fenster)
     spiel_menue.menue_initialisieren(fenster)
     einstellungen.menue_initialisieren(fenster)
+    ereignisse.ereignisse_initialisieren(fenster)
+    statistik.initialisieren(fenster)
+    statistik.laden()
     achievements.initialisieren(fenster)
     missionen.initialisieren(fenster)
     forschung.forschung_initialisieren(fenster)
@@ -1838,6 +1899,8 @@ def spiel_starten():
             laeuft = achievementsmenue_verarbeiten()
         elif spiel_status == "missionen":
             laeuft = missionenmenue_verarbeiten()
+        elif spiel_status == "statistik":
+            laeuft = statistikmenue_verarbeiten()
         elif spiel_status == "einstellungen":
             laeuft = einstellungen_verarbeiten()
         elif spiel_status == "spiel":
@@ -1857,19 +1920,35 @@ def spiel_starten():
         #   spiel_geschwindigkeit = 1 → 60 Frames (normal)
         #   spiel_geschwindigkeit = 2 → 30 Frames (doppelt)
         #   spiel_geschwindigkeit = 0 → pausiert
-        if spiel_status == "spiel" and spiel_geschwindigkeit > 0:
+        # Waehrend das Raumschiff-Fenster offen ist, laeuft die Wirtschaft
+        # nicht weiter - sonst waere die Fracht weg, waehrend man waehlt.
+        if (spiel_status == "spiel" and spiel_geschwindigkeit > 0
+                and not ereignisse.angebot_ist_offen()):
             tick_zaehler += 1
             if tick_zaehler >= max(1, einstellungen.wert("fps") // spiel_geschwindigkeit):
                 tick_zaehler = 0
+                # Vorher merken: Forschung und Stahl koennen durch laufende
+                # Auftraege sinken - gezaehlt wird nur der Zuwachs.
+                forschung_vorher = ressourcen_dict.get("forschung", 0)
+                stahl_vorher = ressourcen_dict.get("stahl", 0)
                 ressourcen.ressourcen_produzieren(ressourcen_dict,
                                                    liste_gebaeude,
                                                    karten_daten)
+                forschung_delta = ressourcen_dict.get("forschung", 0) - forschung_vorher
+                if forschung_delta > 0:
+                    statistik.forschung_erzeugt(forschung_delta)
+                stahl_delta = ressourcen_dict.get("stahl", 0) - stahl_vorher
+                if stahl_delta > 0:
+                    achievements.stahl_erzeugt(stahl_delta)
                 handel.handel_tick(ressourcen_dict, liste_gebaeude)
                 # Fortgeschrittener Kurs (Gegner): Angriffe und Abwehr
                 # laufen als eigener Zustandsautomat nach dem Handel.
                 gegner_ereignis_verarbeiten(
                     gegner.gegner_tick(ressourcen_dict, liste_gebaeude,
                                        aktives_regelwerk()))
+                statistik.tick(ressourcen_dict, liste_gebaeude)
+                ereignis_meldung_verarbeiten(
+                    ereignisse.ereignisse_tick(ressourcen_dict, liste_gebaeude))
                 spielstatus_pruefen()
                 missionen_pruefen()
 
@@ -1906,7 +1985,7 @@ def hilfe_zeichnen():
         "TAB          — Baumenü öffnen/schließen",
         "F            — Forschungsmenü öffnen/schließen",
         "F1-F12       — sichtbare Forschung starten; Mausrad/Bild auf-ab scrollen",
-        "E            — Handelsmenü; Q/W/R/T/Y/U = 2:1-Ressourcentausch",
+        "E            — Handelsmenü; Q/W/R/T/Y/U = 3:1-Ressourcentausch",
         "J / K        — NPC-Angebot annehmen / ablehnen",
         "Z            — Terraforming-Modus ein/aus (nach Forschung)",
         "H            — Diese Hilfe ein-/ausblenden",
@@ -1917,6 +1996,9 @@ def hilfe_zeichnen():
         "S            — Im Pausenmenü den Spielstand speichern",
         "L            — Im Hauptmenü den Spielstand laden",
         "E            — Einstellungen im Hauptmenü und in der Pause",
+        "T            — Gesamtstatistik im Hauptmenü",
+        "R            — Systemausfall sofort reparieren (100 Gold)",
+        "Raumschiff   — Q W E R T Z X wählen, Pfeiltasten = Menge, Enter = einsetzen",
         "R            — Im Hauptmenü Spielregeln auswählen",
         "A            — Achievements anzeigen (Haupt-/Pausenmenü)",
         "M            — Missionszentrale im Hauptmenü öffnen",

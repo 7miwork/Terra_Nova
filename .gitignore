@@ -14,6 +14,10 @@ spielstand.json.tmp
 einstellungen.json
 einstellungen.json.tmp
 
+# ── Persoenliche Statistik (Gebaeude ueber alle Partien, Spielzeit) ────────
+statistik.json
+statistik.json.tmp
+
 # ── Editor-, System- und Hilfsdateien ──────────────────────────────────────
 .vscode/
 .idea/

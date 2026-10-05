@@ -45,6 +45,57 @@ Die Schülerwunschliste „Gegner/Verteidigung“ ist als Modul `gegner.py` eing
 - Drei Achievements („Erste Abwehr“, „Festung“, „Flotte“) und die Mission
   „Kaserne bauen“ belohnen den Einstieg. Alte Spielstände laden weiterhin.
 
+## Umsetzungsstand Phase 5: Balancing, Zufallsereignisse, Statistik
+
+Die Wunschliste der Schülerinnen und Schüler ist als zwei neue Module
+eingebaut — `ereignisse.py` und `statistik.py`.
+
+### Balancing
+
+| Gebäude | vorher | nachher | Grund |
+|---|---|---|---|
+| Fusionsreaktor (10) | 25 Energie | **20** | war zu stark |
+| Gewächshaus (13) | 8 Nahrung | **6** | Nahrung wird später Überschuss |
+| Marktplatz (5) | 12 Gold | **10** | Gold war zu stark |
+
+Der Ressourcenhandel kostet jetzt **3 Einheiten für 1** statt 2:1
+(`handel.TAUSCH_VERHALTNIS`). Der alte Kurs erlaubte es, den kompletten
+Überschuss billig in knappe Ressourcen umzurechnen — das war eine zweite
+Produktionskette. Menütext, Hilfe-Overlay und Handelsfenster benutzen alle
+dieselbe Konstante, damit nichts auseinanderläuft.
+
+### Zufallsereignisse (`ereignisse.py`)
+
+Ein Wirtschaftstick dauert eine Sekunde Spielzeit, deshalb sind „3 Minuten“
+konstant `DAUER_TICKS = 180`. Die Effekte liegen bewusst in `ressourcen.py`,
+damit sie ohne pygame testbar sind:
+
+- **Systemausfall** setzt `energie_stoerung_setzen(180)`. In
+  `_produktion_multiplikator()` bekommen alle Energiegebäude den Faktor
+  `SYSTEMAUSFALL_FAKTOR` (0,70). `systemausfall_reparieren()` kostet 100 Gold
+  und setzt den Zähler auf 0. Taste **R** im Spiel.
+- **Meteoritenschauer** markiert bis zu 10 zufällige Gebäude mit
+  `beschaedigt_rest`. In `ressourcen_produzieren()` bekommen sie den Faktor
+  `BESCHAEDIGT_FAKTOR` (0,20); `_schaden_ticken()` zählt jeden Tick herunter.
+- **Unbekanntes Raumschiff** öffnet ein modales Fenster: **Q W E R T Z X**
+  wählen die Ressource, Pfeiltasten ändern die Menge in 5er-Schritten
+  (Deckel 75), **Enter** setzt ein, **Esc** lehnt ab. Gewonnen heißt
+  +2 × Einsatz, verloren heißt −Einsatz (jeweils 50 %). Solange das Fenster
+  offen ist, hält `main.py` die Wirtschaft an — sonst wäre die Fracht weg,
+  während man wählt.
+
+Ereignisse starten frühestens nach 90 bis 180 Ticks und danach alle 60 bis
+150 Ticks. Ein laufender Systemausfall wird nicht doppelt ausgelöst.
+
+### Gesamtstatistik (`statistik.py`)
+
+Eine eigene Datei `statistik.json` (in `.gitignore`), die **alle Partien**
+zählt: gespielte/gewonnene/verlorene Partien, Spielzeit, Gebäude,
+Forschungspunkte, Handelsaktionen, Technologien, größte Kolonie, Achievements
+und die Häufigkeit der Ereignisse. Angezeigt im Hauptmenü über **T**, jeweils
+neben dem Wert der laufenden Partie. Die beiden Langzeit-Achievements
+(100 Gebäude, 1000 Forschungspunkte) lesen genau diese Werte.
+
 ## Bekannte Fehlerquellen aus dieser Phase (zum Nachschlagen)
 
 1. **`UnboundLocalError` in Modulvariablen**: Wer in einer Funktion eine
@@ -84,6 +135,31 @@ Die Überlappungen aus dem Screenshot sind behoben:
 
 **Offene Idee für euch:** Fenster-Transparenz einstellbar machen oder
 Fensterinhalte per Rechtsklick umschalten (z. B. Übersicht → nur Personal).
+
+## Fallstricke aus Phase 5 (zum Nachschlagen)
+
+5. **`laden()` liest aus dem falschen Wörterbuch**: Wer in einer Ladefunktion
+   erst das Profil leert und danach `_profil[name] = _zahl(name)` schreibt,
+   bekommt immer 0 — `_zahl()` liest das gerade geleerte Profil. Die Werte
+   müssen aus den geladenen Daten (`daten[name]`) kommen. Der Test
+   „speichern, zurücksetzen, laden“ deckt das sofort auf.
+6. **`pygame.K_EQUAL` gibt es nicht**: Die Taste heißt `K_EQUALS` (ebenso
+   `K_KP_EQUALS` für den Zahlenblock). Ein Tippfehler fällt erst zur Laufzeit
+   auf, wenn der Spieler die Taste drückt.
+7. **Zufällige Treffer im Test nicht per Index annehmen**: Der
+   Meteoritenschauer wählt seine Gebäude mit `random.sample()`. Ein Test, der
+   „die Indizes 5–14 sind beschädigt“ annimmt, schlägt fehl. Die Testliste
+   nach `gebaeude_beschaedigt()` filtern, wie in
+   `tests/test_schuelerwuensche.py`.
+8. **Rücksetzfunktionen zuerst aufrufen**: `ressourcen.zustand_importieren({})`
+   leert auch die Energiestörung. Wer erst zurücksetzt und dann ein Ereignis
+   auslöst, testet eine andere Reihenfolge als das Spiel (dort produziert
+   `ressourcen_produzieren()` zuerst, `ereignisse.ereignisse_tick()` danach).
+9. **Achievement-Ziele brauchen drei Stellen**: Eintrag in `ACHIEVEMENTS`,
+   Zeile im `bedingungen`-Dict von `pruefen()` und ein Zähler, der gefüllt
+   wird. Die Langzeit-Achievements lesen ihre Zahl zusätzlich aus dem
+   Statistikprofil (`pruefen(..., profil=statistik.profil())`).
+   Bei 3 × 13 Plätzen passt höchstens bis 37 Zielen in die Übersicht.
 
 ## Offene Ideen zum Gegnersystem (noch nicht umgesetzt)
 

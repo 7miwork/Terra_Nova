@@ -12,6 +12,9 @@ import gegner
 import ton
 import achievements
 import missionen
+import handel
+import ereignisse
+import statistik
 
 print('=== GEBAEUDE_TYPEN ===')
 for i, daten in enumerate(gebaeude.GEBAEUDE_TYPEN):
@@ -118,5 +121,55 @@ for _datei, _muss in (("hud.py", 'panel.zeichnen("uebersicht"'),
                       ("main.py", "panels_anordnen()")):
     assert _muss in _quellen[_datei], f"{_datei}: {_muss}"
 print("  OK 4 Fenster, Maus-/Klick-Pfad und Leisten-Layout verdrahtet")
+
+print('\n=== BALANCING, EREIGNISSE UND STATISTIK (Phase 5) ===')
+# Balancing: die drei geschwaechten Gebaeude
+assert ressourcen.GEBAEUDE_WIRTSCHAFT[10]['produktion']['energie'] == 20, 'Fusionsreaktor'
+assert ressourcen.GEBAEUDE_WIRTSCHAFT[13]['produktion']['nahrung'] == 6, 'Gewaechshaus'
+assert ressourcen.GEBAEUDE_WIRTSCHAFT[5]['produktion']['gold'] == 10, 'Marktplatz'
+assert handel.TAUSCH_VERHALTNIS == 3
+print('  OK Fusionsreaktor 20, Gewaechshaus 6, Marktplatz 10, Handel 3:1')
+
+# Ereignisse: Konstanten und Kopplung an die Produktion (ohne pygame pruefbar)
+assert ereignisse.DAUER_TICKS == 180          # 3 Minuten Spielzeit
+assert ereignisse.REPARATUR_KOSTEN == 100
+assert ereignisse.MAX_EINSATZ == 75
+assert ereignisse.METEOR_GEBAEUDE == 10
+assert ressourcen.SYSTEMAUSFALL_FAKTOR == 0.70
+assert ressourcen.BESCHAEDIGT_FAKTOR == 0.20
+for _name in ("ereignisse_tick", "ereignis_ausloesen", "systemausfall_reparieren",
+              "angebot_abschicken", "angebot_ablehnen", "angebot_ist_offen",
+              "menu_zeichnen", "zustand_exportieren", "zustand_importieren"):
+    assert hasattr(ereignisse, _name), f'ereignisse.{_name} fehlt'
+_werte = {"gold": 400, "energie": 0, "holz": 400, "stein": 400,
+          "bevoelkerung": 30, "nahrung": 100, "kohle": 400, "eisen": 0,
+          "roboter": 0, "stahl": 0, "forschung": 0}
+_geb = [{"typ": 1, "arbeitet": True}]
+_heil, _kaputt = dict(_werte), dict(_werte)
+ressourcen.zustand_importieren({})
+ressourcen.ressourcen_produzieren(_heil, _geb)
+ressourcen.energie_stoerung_setzen(ereignisse.DAUER_TICKS)
+ressourcen.ressourcen_produzieren(_kaputt, _geb)
+assert _heil['energie'] > 0, 'Reaktor produziert nicht'
+assert abs(_kaputt['energie'] - _heil['energie'] * 0.70) < 0.01
+ressourcen.energie_stoerung_setzen(0)
+ressourcen.gebaeude_beschaedigen(_geb[0], ereignisse.DAUER_TICKS)
+assert ressourcen.gebaeude_beschaedigt(_geb[0])
+print('  OK Systemausfall -30 % und Meteoritenschauer -80 % wirken in der Produktion')
+
+# Statistik: Felder, Anzeige und Verknuepfung mit den Achievements
+assert 'zeit' in statistik.FELDER and 'gebaeude' in statistik.FELDER
+assert len(statistik.uebersicht_zeilen()) == len(statistik.FELDER)
+for _name in ("laden", "speichern", "neue_partie", "zustand_zuruecksetzen",
+              "profil", "profil_werte", "partei_werte", "menu_zeichnen"):
+    assert hasattr(statistik, _name), f'statistik.{_name} fehlt'
+assert {'gebaeude', 'forschung'}.issubset(statistik.profil())
+print('  OK Statistik mit Profil, Partie und Overlay')
+
+# Neue Achievements: Ziel, Bedingung und Profil-Anbindung
+assert len(achievements.ACHIEVEMENTS) == 37, '37 Ziele passen in 3 Spalten mit 13'
+for _ziel in ('architekt', 'forschungslegende', 'stahlzeitalter'):
+    assert achievements.eintrag(_ziel) is not None, _ziel
+print('  OK 37 Achievements inklusive der drei neuen Langzeitziele')
 
 print('\nCHECK_OK')

@@ -45,6 +45,11 @@ ACHIEVEMENTS = [
     {"id": "erste_abwehr", "titel": "Erste Abwehr", "beschreibung": "Wehre den ersten Angriff ab.", "punkte": 30, "fortschritt": "abgewehrt", "ziel": 1},
     {"id": "festung", "titel": "Festung", "beschreibung": "Halte vier Lasertürme gleichzeitig.", "punkte": 50, "fortschritt": "typ_23", "ziel": 4},
     {"id": "flotte", "titel": "Flotte", "beschreibung": "Stelle 5 Raumschiffe gleichzeitig.", "punkte": 60, "fortschritt": "raumschiffe", "ziel": 5},
+    # Langzeitige Ziele. Die beiden "insgesamt"-Ziele zaehlen ueber alle
+    # Partien hinweg und kommen deshalb aus dem Spielprofil (statistik.py).
+    {"id": "architekt", "titel": "Stadtbaumeister", "beschreibung": "Baue insgesamt 100 Gebäude in allen Partien.", "punkte": 120, "fortschritt": "profil_gebaeude", "ziel": 100},
+    {"id": "forschungslegende", "titel": "Forschungslegende", "beschreibung": "Erzeuge insgesamt 1000 Forschungspunkte in allen Partien.", "punkte": 120, "fortschritt": "profil_forschung", "ziel": 1000},
+    {"id": "stahlzeitalter", "titel": "Stahlzeitalter", "beschreibung": "Produziere die erste Einheit Stahl.", "punkte": 30, "fortschritt": "stahl_produziert", "ziel": 1},
 ]
 
 _fenster = None
@@ -113,6 +118,12 @@ def angriff_abgewehrt():
     _zaehler["abgewehrt"] = _zaehler.get("abgewehrt", 0) + 1
 
 
+def stahl_erzeugt(menge=1):
+    """Wurde Stahl produziert? Zaehlt fuer das Achievement „Stahlzeitalter“."""
+    if menge > 0:
+        _zaehler["stahl_produziert"] = _zaehler.get("stahl_produziert", 0) + menge
+
+
 def _kontext(ressourcen_dict, liste_gebaeude, karten_daten,
              forschungen=0, wirtschafts_ticks=0, spielstatus="spiel",
              speicher_max=None):
@@ -152,12 +163,23 @@ def _kontext(ressourcen_dict, liste_gebaeude, karten_daten,
 
 def pruefen(ressourcen_dict, liste_gebaeude, karten_daten,
             forschungen=0, wirtschafts_ticks=0, spielstatus="spiel",
-            speicher_max=None):
-    """Prüft alle Ziele und gibt die in diesem Aufruf neuen IDs zurück."""
+            speicher_max=None, profil=None):
+    """Prüft alle Ziele und gibt die in diesem Aufruf neuen IDs zurück.
+
+    ``profil`` ist optional die Statistik aus statistik.py. Wird sie
+    übergeben, zählen die Langzeit-Achievements über alle Partien mit.
+    """
     global _zaehler
     _zaehler.update(_kontext(ressourcen_dict, liste_gebaeude, karten_daten,
                              forschungen, wirtschafts_ticks, spielstatus,
                              speicher_max))
+    if isinstance(profil, dict):
+        for schluessel, name in (("profil_gebaeude", "gebaeude"),
+                                 ("profil_forschung", "forschung")):
+            try:
+                _zaehler[schluessel] = max(0.0, float(profil.get(name, 0) or 0))
+            except (TypeError, ValueError):
+                _zaehler[schluessel] = 0.0
     aktuelle_typen = {f"typ_{index}": sum(
         g.get("typ") == index for g in liste_gebaeude)
         for index in (0, 6, 11, 15, 17, 19, 20)}
@@ -199,6 +221,9 @@ def pruefen(ressourcen_dict, liste_gebaeude, karten_daten,
         "festung": _zaehler.get("typ_23", 0) >= 4,
         "flotte": _zaehler.get("raumschiffe", 0) >= 5,
         "zielmeister": _zaehler.get("sieg", 0) >= 1,
+        "architekt": _zaehler.get("profil_gebaeude", 0) >= 100,
+        "forschungslegende": _zaehler.get("profil_forschung", 0) >= 1000,
+        "stahlzeitalter": _zaehler.get("stahl_produziert", 0) >= 1,
         "perfekte_runde": (_zaehler.get("sieg", 0) >= 1 and
                             len(_erreicht) >= 10),
     }
