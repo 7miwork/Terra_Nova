@@ -15,7 +15,10 @@ import ereignisse
 
 
 DATEI = os.path.join(os.path.dirname(__file__), "spielstand.json")
-VERSION = 1
+VERSION = 2
+# Version 1 = Spielstand ohne Kolonie-Liste; er wird beim Laden automatisch
+# nach Version 2 umgeschrieben (eine einzige Kolonie auf der Erde).
+ALT_VERSIONEN = (1,)
 
 
 def _kopie_wert(wert):
@@ -40,7 +43,7 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
               kamera_x, kamera_y, tick_zaehler, spiel_geschwindigkeit,
               auswahl_kategorie, auswahl_position, gebaeude_auswahl,
               letztes_gebaeude, spielstatus="spiel", versorgungszaehler=None,
-              regel_auswahl="standard"):
+              regel_auswahl="standard", kolonien_daten=None):
     """Speichert den übergebenen Weltzustand und liefert Erfolg plus Text."""
     daten = {
         "version": VERSION,
@@ -60,6 +63,12 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
         },
         "spielstatus": spielstatus,
         "regel_auswahl": regel_auswahl,
+        # Fortgeschrittener Kurs (Planeten): alle Kolonien ausser der
+        # aktiven (die aktive steckt in den Feldern dieses Spielstands).
+        # None = eine einzige Kolonie auf der Erde.
+        "kolonien": (_kopie_wert(kolonien_daten) if kolonien_daten is not None
+                     else {"zaehler": 1, "aktuell": "kolonie_1",
+                           "planeten": {"kolonie_1": "erde"}, "liste": {}}),
         "versorgungszaehler": _kopie_wert(versorgungszaehler or {}),
         "forschung": forschung.zustand_exportieren(),
         "handel": handel.zustand_exportieren(),
@@ -92,8 +101,17 @@ def laden():
     try:
         with open(DATEI, "r", encoding="utf-8") as datei:
             daten = json.load(datei)
-        if daten.get("version") != VERSION:
+        if daten.get("version") not in ALT_VERSIONEN + (VERSION,):
             return None, "Dieser Spielstand hat eine unbekannte Version."
+        # Migration Version 1 -> 2: Es gab nur EINE Kolonie auf der Erde.
+        if daten.get("version") != VERSION:
+            daten["version"] = VERSION
+        # Jeder Spielstand braucht die Kolonie-Liste (alte nach Migration).
+        if not isinstance(daten.get("kolonien"), dict) or \
+                not daten["kolonien"].get("planeten"):
+            daten["kolonien"] = {"zaehler": 1, "aktuell": "kolonie_1",
+                                 "planeten": {"kolonie_1": "erde"},
+                                 "liste": {}}
         pflichtfelder = ("karten_daten", "ressourcen", "gebaeude", "kamera", "auswahl")
         if any(feld not in daten for feld in pflichtfelder):
             return None, "Der Spielstand ist unvollständig."

@@ -88,6 +88,8 @@ import panel        # Schwebende Info-Fenster (Fortgeschrittener Kurs)
 import einstellungen  # Einstellungsmenü mit eigener JSON-Datei
 import ereignisse    # Zufallsereignisse (Systemausfall, Raumschiff, Meteoritenschauer)
 import statistik     # Dauerhafte Spielstatistik (Hauptmenü)
+import planeten      # Planeten, Rohstoffe, Kartenparameter (Wunschliste)
+import kolonien      # Mehrere Kolonien auf verschiedenen Planeten (Wunschliste)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -340,7 +342,7 @@ _geschwindigkeit_vor_pause = 1
 # Hier erstellen wir unsere eigene zufällige Planeten-Oberfläche.
 # ═════════════════════════════════════════════════════════════════════════════
 
-def karte_generieren():
+def karte_generieren(planet_id="erde"):
     """
     Generiert eine zufällige Planeten-Oberfläche.
     
@@ -356,6 +358,9 @@ def karte_generieren():
     """
     global karten_daten
     
+    # Fortgeschrittener Kurs (Planeten): Flaechenverteilung je Planet.
+    parameter = planeten.karten_parameter(planet_id)
+
     # Leere Karte erstellen (erstmal alles Erde)
     karten_daten = []
     for zeile in range(KARTE_HOEHE):
@@ -365,7 +370,7 @@ def karte_generieren():
         karten_daten.append(neue_zeile)
     
     # ── Schritt 1: Große Gras-Flächen erzeugen ────────────────────────────
-    anzahl_gras_flaechen = 8
+    anzahl_gras_flaechen = parameter["gras_flaechen"]
     for _ in range(anzahl_gras_flaechen):
         mitte_x = random.randint(5, KARTE_BREITE - 5)
         mitte_y = random.randint(5, KARTE_HOEHE - 5)
@@ -377,7 +382,7 @@ def karte_generieren():
                     karten_daten[zeile][spalte] = 1  # 1 = Gras
     
     # ── Schritt 2: Gesteins-Flächen erzeugen ──────────────────────────────
-    anzahl_gestein_flaechen = 5
+    anzahl_gestein_flaechen = parameter["gestein_flaechen"]
     for _ in range(anzahl_gestein_flaechen):
         mitte_x = random.randint(5, KARTE_BREITE - 5)
         mitte_y = random.randint(5, KARTE_HOEHE - 5)
@@ -389,7 +394,7 @@ def karte_generieren():
                     karten_daten[zeile][spalte] = 2  # 2 = Gestein
     
     # ── Schritt 3: Sand-Flächen erzeugen ──────────────────────────────────
-    anzahl_sand_flaechen = 6
+    anzahl_sand_flaechen = parameter["sand_flaechen"]
     for _ in range(anzahl_sand_flaechen):
         mitte_x = random.randint(5, KARTE_BREITE - 5)
         mitte_y = random.randint(5, KARTE_HOEHE - 5)
@@ -683,15 +688,95 @@ def pause_umschalten():
         pause_schliessen()
 
 
-def _neue_ressourcen():
-    return {"gold": 100, "energie": 50, "holz": 30, "stein": 20,
-            "bevoelkerung": 10, "nahrung": 50, "forschung": 0,
-            "kohle": 0, "eisen": 0, "roboter": 0, "stahl": 0,
-            "verteidiger": 0, "raumschiffe": 0, "zufriedenheit": 0.0}
+def _kosten_text(kosten):
+    """Baut '120 Gold, 60 Energie, ...' aus einem Kosten-Dict."""
+    return ", ".join(f"{int(menge)} {name.capitalize()}"
+                     for name, menge in kosten.items())
 
 
-def neues_spiel_starten():
-    """Erzeugt eine frische Welt und setzt alle Fortschritte zurück."""
+def kolonie_wechseln(ziel_id):
+    """Sichert die laufende Kolonie und laedt die Ziel-Kolonie (Pause: K)."""
+    global _hintergrund_surface, _hilfe_offen, _terraform_modus
+    if ziel_id == kolonien.aktuelle_id():
+        hud.meldung_anzeigen("Wir sind schon auf dieser Kolonie.")
+        return False
+    if not kolonien.wechseln(ziel_id):
+        hud.meldung_anzeigen("Diese Kolonie konnte nicht geladen werden.")
+        return False
+    # Abgeleitete Zustände der anderen Kolonie neu aufbauen.
+    _hintergrund_surface = None      # Sternenhimmel der anderen Kolonie
+    _hilfe_offen = False
+    _terraform_modus = False
+    menues_schliessen()
+    logistik.netz_aktualisieren(liste_gebaeude)
+    panels_anordnen()
+    panel.zustand_zuruecksetzen()
+    kamera_begrenzen()
+    hud.meldung_anzeigen(f"Gewechselt zu: {kolonien.aktuelle_beschreibung()}")
+    return True
+
+
+def kolonie_naechste_wechseln():
+    """Wechselt zur nächsten Kolonie in der Liste (Pause: K)."""
+    ids = kolonien.alle_ids()
+    if len(ids) < 2:
+        hud.meldung_anzeigen(
+            "Erst eine Kolonie vorhanden - mit G gründest du eine zweite.")
+        return False
+    ziel = ids[(ids.index(kolonien.aktuelle_id()) + 1) % len(ids)]
+    return kolonie_wechseln(ziel)
+
+
+def kolonie_gruenden():
+    """Gründet die nächste freie Kolonie auf einem neuen Planeten (Pause: G)."""
+    ziel = kolonien.naechster_freier_planet()
+    if ziel is None:
+        hud.meldung_anzeigen("Alle spielbaren Planeten sind bereits besiedelt.")
+        return False
+    kosten = planeten.gruendungskosten(ziel)
+    fehlend = [f"{int(menge)} {name.capitalize()}"
+               for name, menge in kosten.items()
+               if ressourcen_dict.get(name, 0) < menge]
+    if fehlend:
+        hud.meldung_anzeigen("Gründung braucht: " + ", ".join(fehlend))
+        return False
+    for name, menge in kosten.items():
+        ressourcen_dict[name] = ressourcen_dict.get(name, 0) - menge
+    # Reihenfolge ist wichtig: alte Kolonie sichern, frische Welt bauen,
+    # dann die neue Kolonie in der Liste registrieren.
+    kolonien.stand_merken()
+    neues_spiel_starten(planet_id=ziel, partei_neustart=False)
+    if not kolonien.gruenden(ziel):
+        for name, menge in kosten.items():          # Kosten zurueck
+            ressourcen_dict[name] = ressourcen_dict.get(name, 0) + menge
+        hud.meldung_anzeigen(
+            f"Kolonie auf dem {planeten.name(ziel)} klappt nicht.")
+        return False
+    hud.meldung_anzeigen(
+        f"Neue Kolonie: {kolonien.aktuelle_beschreibung()} "
+        f"(Kosten: {_kosten_text(kosten)})")
+    return True
+
+
+def _neue_ressourcen(planet_id="erde"):
+    ressourcen_neu = {"gold": 100, "energie": 50, "holz": 30, "stein": 20,
+                      "bevoelkerung": 10, "nahrung": 50, "forschung": 0,
+                      "kohle": 0, "eisen": 0, "roboter": 0, "stahl": 0,
+                      "verteidiger": 0, "raumschiffe": 0, "zufriedenheit": 0.0}
+    # Fortgeschrittener Kurs (Planeten): Startvorräte des Planeten legen
+    # sich ueber die Grundwerte (der Mond beginnt knapper als die Erde).
+    ressourcen_neu.update(planeten.startressourcen(planet_id))
+    return ressourcen_neu
+
+
+def neues_spiel_starten(planet_id="erde", partei_neustart=True):
+    """Erzeugt eine frische Welt auf dem Planeten planet_id.
+
+    partei_neustart=True  - ganz neues Spiel: Statistik, Ereignisse,
+                             Gegner, Handel und Kolonie-Liste starten neu.
+    partei_neustart=False - nur die WELT wird neu gebaut; so entsteht eine
+                             weitere Kolonie auf einem anderen Planeten.
+    """
     global karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude
     global kamera_x, kamera_y, tick_zaehler, spiel_geschwindigkeit
     global gebaeude_auswahl, _auswahl_kategorie, _auswahl_position
@@ -700,9 +785,9 @@ def neues_spiel_starten():
     global spiel_status, spiel_ende_titel, spiel_ende_grund
     global _null_nahrung_ticks, _null_energie_ticks, _geschwindigkeit_vor_pause
 
-    karte_generieren()
+    karte_generieren(planet_id)
     sterne_generieren()
-    ressourcen_dict = _neue_ressourcen()
+    ressourcen_dict = _neue_ressourcen(planet_id)
     liste_gebaeude = []
     kamera_x = 0
     kamera_y = 0
@@ -724,17 +809,23 @@ def neues_spiel_starten():
     _null_energie_ticks = 0
     _geschwindigkeit_vor_pause = 1
     forschung.forschung_zuruecksetzen()
-    handel.handel_zuruecksetzen()
+    ressourcen.zustand_importieren({})
+    # Fortgeschrittener Kurs (Planeten): Rohstoff-Boni des Planeten
+    # gehoeren zur frischen Kolonie und stehen sofort bereit.
+    ressourcen.planeten_faktoren_setzen(planeten.rohstoffe(planet_id))
     # Fortgeschrittener Kurs (Logistik): Netz und Ansicht zuruecksetzen
     # und fuer die leere Kolonie sofort neu berechnen.
     logistik.zustand_zuruecksetzen()
     logistik.netz_aktualisieren(liste_gebaeude)
-    ressourcen.zustand_importieren({})
-    # Fortgeschrittener Kurs (Gegner): neues Spiel = Friedenszeit von vorn.
-    gegner.zustand_zuruecksetzen()
-    # Zufallsereignisse starten neu, die Statistik zaehlt die Partie.
-    ereignisse.ereignisse_zuruecksetzen()
-    statistik.neue_partie()
+    if partei_neustart:
+        handel.handel_zuruecksetzen()
+        # Fortgeschrittener Kurs (Gegner): neues Spiel = Friedenszeit von vorn.
+        gegner.zustand_zuruecksetzen()
+        # Zufallsereignisse starten neu, die Statistik zaehlt die Partie.
+        ereignisse.ereignisse_zuruecksetzen()
+        statistik.neue_partie()
+        # Neue Partie = frische Kolonie-Liste mit dem Startplaneten.
+        kolonien.zuruecksetzen(planet_id)
     spiel_status = "spiel"
     # Fortgeschrittener Kurs: Nach dem Endmenue darf die Musik wieder laufen.
     ton.musik_starten()
@@ -743,14 +834,17 @@ def neues_spiel_starten():
 
 
 def spielstand_speichern():
-    """Speichert die aktuelle Welt und zeigt das Ergebnis im HUD an."""
+    """Speichert alle Kolonien und zeigt das Ergebnis im HUD an."""
+    # Fortgeschrittener Kurs (Planeten): aktive Kolonie zuerst sichern,
+    # dann den kompletten Kolonie-Bestand mitspeichern.
+    kolonien.stand_merken()
     erfolg, meldung = spielstand.speichern(
         karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
         kamera_x, kamera_y, tick_zaehler, max(1, spiel_geschwindigkeit),
         _auswahl_kategorie, _auswahl_position, gebaeude_auswahl,
         _letztes_gebaeude, spiel_status,
         {"nahrung": _null_nahrung_ticks, "energie": _null_energie_ticks},
-        _regel_auswahl)
+        _regel_auswahl, kolonien_daten=kolonien.zustand_fuer_spielstand())
     print(meldung)
     hud.meldung_anzeigen(meldung)
     return erfolg
@@ -784,6 +878,9 @@ def spielstand_laden():
                 return False, "Ein Gebäude im Spielstand ist ungültig."
     except (KeyError, TypeError):
         return False, "Der Spielstand ist unvollständig."
+
+    # Fortgeschrittener Kurs (Planeten): Kolonie-Liste uebernehmen.
+    kolonien.zustand_uebernehmen(daten.get("kolonien"))
 
     karten_daten = karte
     sterne_liste = daten.get("sterne_liste") or sterne_liste
@@ -1077,14 +1174,18 @@ def missionen_zeichnen():
 
 def pausemenue_zeichnen():
     optionen = [("fortsetzen", "Fortsetzen", "Esc / P / Enter"),
+                ("kolonie_wechseln", "Zu anderer Kolonie wechseln", "K"),
+                ("kolonie_gruenden", "Neue Kolonie gründen", "G"),
                 ("speichern", "Spielstand speichern", "S"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "I"),
                 ("einstellungen", "Einstellungen", "E"),
                 ("hauptmenue", "Zum Hauptmenü", "M"),
                 ("beenden", "Spiel beenden", "Q")]
+    kosten = planeten.gruendungskosten()
     spiel_menue.menu_zeichnen("PAUSE", "Das Spiel steht still.", optionen, info_zeilen=[
-        "Speichern ist jederzeit in der Pause möglich.",
+        f"Aktuelle Kolonie: {kolonien.aktuelle_beschreibung()}",
+        f"Neue Kolonie gründen kostet: {_kosten_text(kosten)}",
         "Beim Wechsel zum Hauptmenü bleibt der Spielstand erhalten.",
     ], akzent=(255, 205, 95))
 
@@ -1292,6 +1393,8 @@ def pausemenue_verarbeiten():
     """Verarbeitet das ESC-Pausenmenü."""
     global spiel_status, _achievementmenue_ziel, _missionenmenue_ziel
     optionen = [("fortsetzen", "Fortsetzen", "Esc / P / Enter"),
+                ("kolonie_wechseln", "Zu anderer Kolonie wechseln", "K"),
+                ("kolonie_gruenden", "Neue Kolonie gründen", "G"),
                 ("speichern", "Spielstand speichern", "S"),
                 ("achievements", "Achievements anzeigen", "A"),
                 ("missionen", "Missionszentrale", "I"),
@@ -1324,6 +1427,16 @@ def pausemenue_verarbeiten():
             elif ereignis.key == pygame.K_m:
                 spiel_status = "hauptmenue"
                 menues_schliessen()
+            elif ereignis.key == pygame.K_k:
+                # Fortgeschrittener Kurs (Planeten): Kolonie wechseln.
+                if kolonie_naechste_wechseln():
+                    pause_schliessen()
+                    return True
+            elif ereignis.key == pygame.K_g:
+                # Fortgeschrittener Kurs (Planeten): neue Kolonie gruenden.
+                if kolonie_gruenden():
+                    pause_schliessen()
+                    return True
             elif ereignis.key == pygame.K_q:
                 return False
         if ereignis.type == pygame.MOUSEBUTTONDOWN and ereignis.button == 1:
@@ -1331,6 +1444,14 @@ def pausemenue_verarbeiten():
             if aktion == "fortsetzen":
                 pause_schliessen()
                 return True
+            if aktion == "kolonie_wechseln":
+                if kolonie_naechste_wechseln():
+                    pause_schliessen()
+                    return True
+            if aktion == "kolonie_gruenden":
+                if kolonie_gruenden():
+                    pause_schliessen()
+                    return True
             if aktion == "speichern":
                 spielstand_speichern()
             if aktion == "einstellungen":
@@ -1884,6 +2005,9 @@ def spiel_starten():
     gegner.initialisieren(fenster)
     panel.initialisieren(fenster)
 
+    # Fortgeschrittener Kurs (Planeten): main.py als Ziel der Stände.
+    kolonien.hauptmodul_setzen(sys.modules[__name__], KARTE_BREITE, KARTE_HOEHE)
+
     print("Hauptmenü geöffnet. Enter startet ein neues Spiel, L lädt einen Spielstand.")
     print(f"Karte: {KARTE_BREITE} x {KARTE_HOEHE} Kacheln = "
           f"{KARTE_BREITE * KACHEL_GROESSE} x {KARTE_HOEHE * KACHEL_GROESSE} Pixel")
@@ -2003,6 +2127,8 @@ def hilfe_zeichnen():
         "A            — Achievements anzeigen (Haupt-/Pausenmenü)",
         "M            — Missionszentrale im Hauptmenü öffnen",
         "I            — Missionszentrale in der Pause öffnen",
+        "K            — In der Pause: zu anderer Kolonie wechseln",
+        "G            — In der Pause: neue Kolonie gründen",
         "",
         "Maus         — Linksklick = bauen/terraformen; Rechtsklick = abreißen",
         "WASD         — Kamera scrollen; Pfeil links/rechts = Auswahl",

@@ -13,6 +13,34 @@ _prestige_bonus_aktiv = False
 SYSTEMAUSFALL_FAKTOR = 0.70    # Systemausfall: 30 Prozent weniger Energie
 BESCHAEDIGT_FAKTOR = 0.20      # Meteoritenschauer: 80 Prozent weniger Produktion
 _energie_stoerung = 0
+# Fortgeschrittener Kurs (Planeten): Produktionsfaktoren des Planeten,
+# auf dem die AKTIVE Kolonie steht. {"eisen": 2.5} auf dem Mars z.B.
+# Wird pro Kolonie mitgespeichert (zustand_exportieren).
+_planeten_faktoren = {}
+
+
+def planeten_faktoren_setzen(faktoren):
+    """Produktionsfaktoren des aktuellen Planeten setzen.
+
+    Nur Zahlen groesser 0 werden uebernommen, alles andere stammt aus
+    einem kaputten Spielstand und wird ignoriert.
+    """
+    global _planeten_faktoren
+    neue = {}
+    if isinstance(faktoren, dict):
+        for rohstoff, wert in faktoren.items():
+            try:
+                wert = float(wert)
+            except (TypeError, ValueError):
+                continue
+            if wert > 0:
+                neue[str(rohstoff)] = wert
+    _planeten_faktoren = neue
+
+
+def planeten_faktor(rohstoff):
+    """Faktor fuer eine Ressource auf dem aktuellen Planeten (1.0 = normal)."""
+    return _planeten_faktoren.get(rohstoff, 1.0)
 
 
 def zustand_exportieren():
@@ -22,6 +50,7 @@ def zustand_exportieren():
         "lager_bonus_aktiv": _lager_bonus_aktiv,
         "prestige_bonus_aktiv": _prestige_bonus_aktiv,
         "energie_stoerung": _energie_stoerung,
+        "planeten": dict(_planeten_faktoren),
     }
 
 
@@ -37,6 +66,8 @@ def zustand_importieren(daten):
     _lager_bonus_aktiv = bool(daten.get("lager_bonus_aktiv", False))
     _prestige_bonus_aktiv = bool(daten.get("prestige_bonus_aktiv", False))
     energie_stoerung_setzen(daten.get("energie_stoerung", 0))
+    # Alter Spielstand ohne Planeten: Faktor 1.0 auf alles.
+    planeten_faktoren_setzen(daten.get("planeten", {}))
 
 
 def energie_stoerung_setzen(ticks):
@@ -460,6 +491,11 @@ def eisen_fund_chance():
 
 def _produktion_multiplikator(typ_index, ress_name):
     faktor = 1.0
+    # Fortgeschrittener Kurs (Planeten): Rohstoff-Boni des Planeten
+    # wirken auf JEDES produzierende Gebaeude. Mars z.B. liefert 2,5 x
+    # Eisen, der Mond 1,5 x Forschung. Faktor 1.0 aendert nichts.
+    if ress_name in _planeten_faktoren:
+        faktor *= _planeten_faktoren[ress_name]
     if forschung.ist_technologie_erforscht("produktion"):
         faktor *= 1.25
     if _prestige_bonus_aktiv:
