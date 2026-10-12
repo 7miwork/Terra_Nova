@@ -37,6 +37,7 @@ Nicht umgesetzt (Ideen fuer Schueler, siehe auch das Schuelerhandbuch):
 
 import pygame
 
+import iso           # Isometrische Ansicht: Rauten statt Rechtecke (Schritt 5)
 import gebaeude
 
 
@@ -47,6 +48,9 @@ import gebaeude
 # Hauptschalter: False = Strassen sind reine Deko (wie in alten Versionen).
 # Bestehende Tests, die Gebaeude ohne Strassen bauen, setzen ihn auf False.
 LOGISTIK_AKTIV = True
+# Ansichtsschalter wie in main.py: True = Rauten, False = alte Rechtecke.
+# main.py gibt ISO_ANSICHT per ansicht_setzen() weiter (kein Kreis-Import).
+_iso_ansicht = True
 
 # Die beiden wichtigsten Gebaeudetypen fuer dieses Modul.
 BASIS_TYP = 0
@@ -273,19 +277,77 @@ def ansicht_umschalten():
     return _ansicht_aktiv
 
 
+def ansicht_setzen(iso_an):
+    """Schaltet die Logistik-Ansicht auf Rauten oder Rechtecke um.
+
+    main.py gibt hier ISO_ANSICHT weiter, damit Boden, Gebaeude und
+    Logistik dieselbe Ansicht zeigen. Ohne diese Funktion muesste
+    logistik.py die Konstante aus main.py importieren — das gaebe einen
+    Kreis-Import (main.py importiert logistik.py bereits).
+    """
+    global _iso_ansicht
+    _iso_ansicht = bool(iso_an)
+
+
 def ansicht_aktiv():
     """Ist die Logistik-Ansicht gerade sichtbar?"""
     return _ansicht_aktiv
 
 
 def _kachel_rechteck(kacheln, kamera_x, kamera_y, kachel_groesse):
-    """Baut ein Rechteck um einen ganzen Gebaeude-Grundriss."""
+    """Baut ein Rechteck um einen ganzen Gebaeude-Grundriss.
+
+    Diese Funktion gehoert zur alten 2D-Ansicht und bleibt zum Vergleichen
+    erhalten. Die Iso-Ansicht benutzt stattdessen Raute pro Raute (siehe
+    _grundriss_punkte weiter unten).
+    """
     xs = [kachel[0] for kachel in kacheln]
     ys = [kachel[1] for kachel in kacheln]
     return pygame.Rect(min(xs) * kachel_groesse - kamera_x,
                        min(ys) * kachel_groesse - kamera_y,
                        (max(xs) - min(xs) + 1) * kachel_groesse,
                        (max(ys) - min(ys) + 1) * kachel_groesse)
+
+
+def _grundriss_punkte(kacheln, kamera_x, kamera_y):
+    """Baut die Huelle um einen Gebaeude-Grundriss in der Iso-Ansicht.
+
+    Statt eines Rechtecks nehmen wir die aeussersten Rauten-Ecken aller
+    Grundriss-Kacheln: oben die hoechste obere Ecke, links die am weitesten
+    linke, rechts die am weitesten rechte und unten die tiefste untere
+    Ecke. So umschliesst das Viereck genau den Fussabdruck — auch bei der
+    2x3-Universitaet. Rueckgabe: vier Punkte plus Begrenzungs-Rechteck
+    (fuer die Sichtbarkeitspruefung).
+    """
+    alle_punkte = []
+    for kachel_x, kachel_y in kacheln:
+        alle_punkte.extend(iso.kachel_polygon(kachel_x, kachel_y,
+                                              kamera_x, kamera_y))
+    oben = min(alle_punkte, key=lambda punkt: punkt[1])
+    unten = max(alle_punkte, key=lambda punkt: punkt[1])
+    links = min(alle_punkte, key=lambda punkt: punkt[0])
+    rechts = max(alle_punkte, key=lambda punkt: punkt[0])
+    huelle = [oben, rechts, unten, links]
+    xs = [punkt[0] for punkt in huelle]
+    ys = [punkt[1] for punkt in huelle]
+    return huelle, pygame.Rect(min(xs), min(ys), max(xs) - min(xs),
+                               max(ys) - min(ys))
+
+
+def _punkt_sichtbar(punkte):
+    """Schnelle Pruefung, ob eine Raute im Fenster liegt.
+
+    Wir schauen nur auf die Begrenzung der Punkte: Liegt sie komplett
+    links, rechts, oben oder unten ausserhalb, malen wir nichts. Das ist
+    dasselbe Culling wie bei den Rechtecken, nur fuer Polygone.
+    """
+    if _fenster is None:
+        return False
+    xs = [punkt[0] for punkt in punkte]
+    ys = [punkt[1] for punkt in punkte]
+    return not (max(xs) < 0 or max(ys) < 0 or
+                min(xs) > _fenster.get_width() or
+                min(ys) > _fenster.get_height())
 
 
 def _ist_sichtbar(rect):
@@ -302,9 +364,65 @@ def zeichnen(liste_gebaeude, kamera_x, kamera_y, kachel_groesse):
 
     Gruene Kacheln = Strassennetz an der Basis
     Rote Rahmen    = Gebaeude ohne Strassenanbindung
+
+    In der Iso-Ansicht sind beides Rauten: Die gruenen Netz-Rauten liegen
+    flach auf dem Boden (sie werden nach den Gebaeuden gezeichnet, damit
+    man das Netz auch zwischen den Haeusern erkennt). Der rote Rahmen
+    umschliesst den Fussabdruck des Gebaeudes.
     """
     if _fenster is None or not _ansicht_aktiv:
         return
+    if _iso_ansicht:
+        _zeichnen_iso(liste_gebaeude, kamera_x, kamera_y)
+    else:
+        _zeichnen_2d(liste_gebaeude, kamera_x, kamera_y, kachel_groesse)
+
+
+def _zeichnen_iso(liste_gebaeude, kamera_x, kamera_y):
+    """Zeichnet die Logistik-Ansicht als Rauten (Iso-Ansicht).
+
+    Schritt 1 malt jede Netzstrasse als halbtransparente gruene Raute auf
+    den Boden. Schritt 2 umrandet stillstehende Gebaeude mit einem roten
+    Rahmen um ihren Fussabdruck. Schritt 3 (Legende) steht weiter unten
+    und ist ansichtsunabhaengig.
+    """
+    # ── Schritt 1: Netzstrassen gruen hinterlegen ────────────────────────
+    # Eine halbtransparente Flaeche liegt ueber der Welt, damit man die
+    # Strassen und Gebaeude trotzdem noch erkennt.
+    overlay = pygame.Surface(_fenster.get_size(), pygame.SRCALPHA)
+    for (kachel_x, kachel_y) in _netz_kacheln:
+        punkte = iso.kachel_polygon(kachel_x, kachel_y, kamera_x, kamera_y)
+        if _punkt_sichtbar(punkte):
+            overlay.fill((FARBE_NETZ[0], FARBE_NETZ[1], FARBE_NETZ[2],
+                          FARBE_NETZ_ALPHA),
+                         pygame.Rect(min(p[0] for p in punkte),
+                                     min(p[1] for p in punkte),
+                                     max(p[0] for p in punkte)
+                                     - min(p[0] for p in punkte),
+                                     max(p[1] for p in punkte)
+                                     - min(p[1] for p in punkte)))
+            pygame.draw.polygon(overlay, FARBE_NETZ + (255,), punkte, 2)
+    _fenster.blit(overlay, (0, 0))
+
+    # ── Schritt 2: Nicht angebundene Gebaeude rot umranden ──────────────
+    stillstehende = []
+    for ein_gebaeude in liste_gebaeude:
+        if not ein_gebaeude.get("stillstand_grund"):
+            continue
+        huelle, rahmen = _grundriss_punkte(_kacheln_von(ein_gebaeude),
+                                           kamera_x, kamera_y)
+        if _ist_sichtbar(rahmen):
+            pygame.draw.polygon(_fenster, FARBE_WARNUNG, huelle, 3)
+        stillstehende.append(ein_gebaeude)
+    _legende_zeichnen(stillstehende)
+
+
+def _zeichnen_2d(liste_gebaeude, kamera_x, kamera_y, kachel_groesse):
+    """Zeichnet die Logistik-Ansicht als Rechtecke (alte Ansicht).
+
+    Diese Funktion enthaelt den unveraenderten alten Code und bleibt zum
+    Vergleichen im Unterricht erhalten (ansicht_setzen(False)).
+    """
 
     # ── Schritt 1: Netzstrassen gruen hinterlegen ────────────────────────
     # Eine halbtransparente Flaeche liegt ueber der Welt, damit man die
@@ -320,7 +438,6 @@ def zeichnen(liste_gebaeude, kamera_x, kamera_y, kachel_groesse):
     _fenster.blit(overlay, (0, 0))
 
     # ── Schritt 2: Nicht angebundene Gebaeude rot umranden ──────────────
-    schrift = pygame.font.Font(None, 17)
     stillstehende = []
     for ein_gebaeude in liste_gebaeude:
         if not ein_gebaeude.get("stillstand_grund"):
@@ -331,6 +448,18 @@ def zeichnen(liste_gebaeude, kamera_x, kamera_y, kachel_groesse):
             pygame.draw.rect(_fenster, FARBE_WARNUNG, rect, 3)
         stillstehende.append(ein_gebaeude)
 
+    # ── Schritt 3: Legende (ansichtsunabhaengig, siehe _legende_zeichnen).
+    _legende_zeichnen(stillstehende)
+
+
+def _legende_zeichnen(stillstehende):
+    """Zeichnet Legende und Liste der stillstehenden Gebaeude.
+
+    Dieser Schritt ist ansichtsunabhaengig: Er malt nur Text links auf den
+    Bildschirm und braucht keine Kachel-Umrechnung. Beide Ansichten (Iso
+    und 2D) rufen ihn am Ende auf.
+    """
+    schrift = pygame.font.Font(None, 17)
     # ── Schritt 3: Legende und Liste der stillstehenden Gebaeude ─────────
     zeilen = ["LOGISTIK-ANSICHT (V schliesst die Ansicht)",
               "Gruen = Strassennetz an der Basis"]

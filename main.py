@@ -2082,6 +2082,8 @@ def spielwelt_zeichnen():
     karte_zeichnen()
     # gebaeude und logistik zeichnen die Welt — deshalb die um das HUD
     # versetzte Kamera uebergeben (karte_zeichnen rechnet intern gleich).
+    # Reihenfolge: Boden, Gebaeude, Logistik-Overlay (Netz liegt bewusst
+    # UEBER den Strassen-Bildern, damit man es zwischen Haeusern sieht).
     gebaeude.gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_zeichnen_y())
     # Fortgeschrittener Kurs: Logistik-Ansicht nur bei Bedarf zeichnen.
     logistik.zeichnen(liste_gebaeude, kamera_x, kamera_zeichnen_y(),
@@ -2138,8 +2140,10 @@ def spiel_starten():
     print("Initialisiere Menüs und Spielmodule...")
     sterne_generieren()
     gebaeude.gebaeude_initialisieren(fenster, KACHEL_GROESSE)
-    # Iso-Schritt 4: Gebaeude-Ansicht folgt dem Schalter in main.py.
+    # Iso-Schritt 4 und 5: Gebaeude- und Logistik-Ansicht folgen dem
+    # Schalter in main.py (kein Kreis-Import noetig).
     gebaeude.ansicht_setzen(ISO_ANSICHT)
+    logistik.ansicht_setzen(ISO_ANSICHT)
     hud.hud_initialisieren(fenster)
     menu.menu_initialisieren(fenster)
     spiel_menue.menue_initialisieren(fenster)
