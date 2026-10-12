@@ -88,6 +88,7 @@ import panel        # Schwebende Info-Fenster (Fortgeschrittener Kurs)
 import einstellungen  # Einstellungsmenü mit eigener JSON-Datei
 import ereignisse    # Zufallsereignisse (Systemausfall, Raumschiff, Meteoritenschauer)
 import statistik     # Dauerhafte Spielstatistik (Hauptmenü)
+import iso           # Isometrische Ansicht: Raster zu Rauten (Schritt 2)
 import planeten      # Planeten, Rohstoffe, Kartenparameter (Wunschliste)
 import kolonien      # Mehrere Kolonien auf verschiedenen Planeten (Wunschliste)
 
@@ -146,6 +147,12 @@ FARBE_SAND          = (195, 185, 150)
 # Die Gitternetz-Linien zwischen den Kacheln.
 # In Final Earth 2 siehst du ein feines Gitter auf der Oberfläche.
 FARBE_GITTER       = (60, 55, 50)       # Dunkle Gitterlinien
+
+# ── Ansicht: 2D oder isometrisch ────────────────────────────────────────────
+# True = Rauten-Ansicht (3D-Effekt wie OpenTTD), False = alte Rechtecke.
+# Zum Vergleichen im Unterricht einfach umschalten und neu starten.
+ISO_ANSICHT = True
+ERDWAND_HOEHE = 14   # So hoch ist die Erdwand an der Vorderkante (in Pixeln)
 
 # ── Farben — Text und HUD ──────────────────────────────────────────────────
 # In Final Earth 2 gibt es eine Anzeige mit Informationen.
@@ -465,6 +472,97 @@ BODEN_FARBEN = {
 }
 
 
+def _farbe_dunkler(farbe, anteil=0.6):
+    """Macht eine Farbe dunkler (fuer die Erdwand an der Vorderkante).
+
+    Die Wand benutzt dieselbe Bodenfarbe, nur abgedunkelt — so sieht man
+    sofort, dass sie zur Karte gehoert und Schatten darstellt. Der Anteil
+    0.6 heisst: 60 Prozent der Helligkeit bleiben uebrig.
+    """
+    return tuple(max(0, min(255, int(kanal * anteil))) for kanal in farbe)
+
+
+def _karte_2d_zeichnen(gitter_an, erste_spalte, letzte_spalte,
+                       erste_zeile, letzte_zeile, kamera_anzeige_y):
+    """Zeichnet den Boden als flache Rechtecke (alte Ansicht).
+
+    Diese Funktion gibt es nur zum Vergleichen im Unterricht: Mit
+    ISO_ANSICHT = False laeuft das Spiel genau wie frueher weiter.
+    """
+    for zeile in range(erste_zeile, letzte_zeile):
+        pixel_y = zeile * KACHEL_GROESSE - kamera_anzeige_y
+        for spalte in range(erste_spalte, letzte_spalte):
+            pixel_x = spalte * KACHEL_GROESSE - kamera_x
+            kachel_rect = pygame.Rect(
+                pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
+            pygame.draw.rect(
+                fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
+            if gitter_an:
+                pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
+
+
+def _karte_iso_zeichnen(gitter_an):
+    """Zeichnet den Boden als Rauten und die Erdwand an der Vorderkante.
+
+    Die Kacheln kommen von hinten nach vorne auf den Bildschirm, damit
+    spaeter Gebaeude und die Erdwand in der richtigen Reihenfolge liegen.
+    Die Erdwand ist ein dunkles Stueck unter der letzten Zeile und der
+    letzten Spalte — die Karte wirkt dadurch wie eine Platte, die ueber
+    dem Sternenhimmel schwebt.
+    """
+    kamera_anzeige_y = kamera_zeichnen_y()
+    kacheln = []
+    for zeile in range(KARTE_HOEHE):
+        for spalte in range(KARTE_BREITE):
+            # Nur sichtbare Rauten einsammeln (Culling aus iso.py).
+            ecke_x, ecke_y = iso.raster_zu_welt(spalte, zeile)
+            bild_x = ecke_x - kamera_x
+            bild_y = ecke_y - kamera_anzeige_y
+            if (bild_x + iso.ISO_HALB_BREITE < 0
+                    or bild_x - iso.ISO_HALB_BREITE > BILD_BREITE
+                    or bild_y + iso.ISO_KACHEL_HOEHE < 0
+                    or bild_y > BILD_HOEHE):
+                continue
+            kacheln.append((spalte, zeile))
+    # Von hinten nach vorne: kleinere Summe aus spalte + zeile zuerst.
+    kacheln.sort(key=lambda kachel: (kachel[0] + kachel[1], kachel[1]))
+    for spalte, zeile in kacheln:
+        punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
+        pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
+                            punkte)
+        if gitter_an:
+            pygame.draw.polygon(fenster, FARBE_GITTER, punkte, 1)
+    # Erdwand an der Vorderkante: letzte Zeile und letzte Spalte.
+    letzte_zeile = KARTE_HOEHE - 1
+    letzte_spalte = KARTE_BREITE - 1
+    for spalte in range(KARTE_BREITE):
+        _erdwand_stueck(spalte, letzte_zeile, karten_daten[letzte_zeile][spalte])
+    for zeile in range(KARTE_HOEHE - 1):
+        _erdwand_stueck(letzte_spalte, zeile, karten_daten[zeile][letzte_spalte])
+
+
+def _erdwand_stueck(spalte, zeile, boden_typ):
+    """Zeichnet ein Stueck Erdwand unter einer Vorderkanten-Raute.
+
+    Die Wand ist ein kleines Viereck unter der unteren Rautenhaelfte:
+    von der linken ueber die untere bis zur rechten Ecke, dann gerade
+    nach unten. Dunklere Bodenfarbe = Schattenseite der Platte.
+    """
+    kamera_anzeige_y = kamera_zeichnen_y()
+    punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
+    oben_links, oben_rechts, unten, _ = punkte[3], punkte[1], punkte[2], None
+    wand = [oben_links, unten, oben_rechts,
+            (oben_rechts[0], oben_rechts[1] + ERDWAND_HOEHE),
+            (oben_links[0], oben_links[1] + ERDWAND_HOEHE)]
+    # Ganz ausserhalb des Bildes malen wir nichts (spart Rechenzeit).
+    alle_x = [punkt[0] for punkt in wand]
+    alle_y = [punkt[1] for punkt in wand]
+    if (max(alle_x) < 0 or min(alle_x) > BILD_BREITE
+            or max(alle_y) < 0 or min(alle_y) > BILD_HOEHE):
+        return
+    pygame.draw.polygon(fenster, _farbe_dunkler(BODEN_FARBEN[boden_typ]), wand)
+
+
 def karte_zeichnen():
     """Zeichnet nur den sichtbaren Ausschnitt der Planetenoberfläche.
 
@@ -474,6 +572,11 @@ def karte_zeichnen():
     """
     # Einstellung "Gitterlinien": lässt sich im Einstellungsmenü abschalten.
     gitter_an = einstellungen.wert("gitter_an")
+    # Isometrische Ansicht (Schritt 2): Rauten statt Rechtecke. Mit
+    # ISO_ANSICHT = False laeuft alles wie frueher (fuer den Vergleich).
+    if ISO_ANSICHT:
+        _karte_iso_zeichnen(gitter_an)
+        return
     erste_spalte = max(0, kamera_x // KACHEL_GROESSE)
     letzte_spalte = min(
         KARTE_BREITE,
@@ -507,17 +610,54 @@ def karte_zeichnen():
 # 5 Gebäudetypen, weil sie Farbe+Kürzel aus GEBAEUDE_TYPEN holt.
 
 
+def maus_zu_kachel(maus_x, maus_y):
+    """Rechnet eine Mausposition in eine Kachel um (fuer Bauen und Abreissen).
+
+    In der alten 2D-Ansicht teilen wir (Maus + Kamera) durch die
+    Kachelgroesse. In der Iso-Ansicht dreht iso.welt_zu_raster die
+    Bildschirmposition zurueck ins Raster. Die y-Richtung nutzt immer
+    kamera_zeichnen_y(), weil die Welt um die Ressourcenleiste versetzt
+    liegt. Ausserhalb der Karte kommen negative oder zu grosse Werte —
+    der Aufrufer prueft die Grenzen wie bisher.
+    """
+    if ISO_ANSICHT:
+        return iso.welt_zu_raster(maus_x + kamera_x,
+                                  maus_y + kamera_zeichnen_y())
+    kachel_x = (maus_x + kamera_x) // KACHEL_GROESSE
+    kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
+    return kachel_x, kachel_y
+
+
 def kamera_begrenzen():
     """
     Verhindert dass die Kamera über den Rand der Karte scrollt.
 
-    Nach oben endet die Kamera bei 0 — Kachel (0, 0) liegt dann genau
-    unter der Ressourcenleiste (die Welt wird um HUD_HOEHE nach unten
-    gezeichnet, siehe kamera_zeichnen_y). Nach unten darf die Kamera um
-    HUD_HOEHE weiter scrollen, damit die letzte Kachelreihe noch unter
+    In der alten 2D-Ansicht endet die Kamera bei 0 — Kachel (0, 0) liegt
+    dann genau unter der Ressourcenleiste (die Welt wird um HUD_HOEHE nach
+    unten gezeichnet, siehe kamera_zeichnen_y). Nach unten darf die Kamera
+    um HUD_HOEHE weiter scrollen, damit die letzte Kachelreihe noch unter
     der Leiste vollstaendig sichtbar wird.
+
+    In der Iso-Ansicht ist die Karte ein Rautenfeld (siehe
+    iso.welt_grenzen): Links ragt sie ins Negative, unten reicht sie bis
+    2400. Die Kamera darf hoechstens zwei Kacheln daneben stehen, damit
+    man nicht ins leere Weltall scrollt.
     """
     global kamera_x, kamera_y
+    if ISO_ANSICHT:
+        # Zwei Kacheln Rand in jede Richtung — sonst nur Sternenhimmel.
+        rand_x = 2 * iso.ISO_HALB_BREITE
+        rand_y = 2 * iso.ISO_HALB_HOEHE
+        min_x, min_y, max_x, max_y = iso.welt_grenzen(KARTE_BREITE,
+                                                     KARTE_HOEHE)
+        min_kamera_x = min_x - BILD_BREITE + rand_x
+        max_kamera_x = max_x - rand_x
+        # Oben endet die Welt bei 0, unten haengt die Erdwand dran.
+        min_kamera_y = min_y - BILD_HOEHE + hud.HUD_HOEHE + rand_y
+        max_kamera_y = max_y + ERDWAND_HOEHE - hud.HUD_HOEHE - rand_y
+        kamera_x = max(min_kamera_x, min(max_kamera_x, kamera_x))
+        kamera_y = max(min_kamera_y, min(max_kamera_y, kamera_y))
+        return
     karte_pixel_breite = KARTE_BREITE * KACHEL_GROESSE
     karte_pixel_hoehe  = KARTE_HOEHE  * KACHEL_GROESSE
     max_kamera_x = karte_pixel_breite - BILD_BREITE
@@ -789,8 +929,17 @@ def neues_spiel_starten(planet_id="erde", partei_neustart=True):
     sterne_generieren()
     ressourcen_dict = _neue_ressourcen(planet_id)
     liste_gebaeude = []
-    kamera_x = 0
-    kamera_y = 0
+    # Startkamera: Iso zeigt die Kartenmitte (0, 0 waere leere Ecke),
+    # 2D startet wie frueher oben links. Danach begrenzen nicht vergessen.
+    if ISO_ANSICHT:
+        mitte_x, mitte_y = iso.raster_zu_welt(KARTE_BREITE // 2,
+                                              KARTE_HOEHE // 2)
+        kamera_x = mitte_x - BILD_BREITE // 2
+        kamera_y = mitte_y - BILD_HOEHE // 2
+    else:
+        kamera_x = 0
+        kamera_y = 0
+    kamera_begrenzen()
     tick_zaehler = 0
     spiel_geschwindigkeit = 1
     gebaeude_auswahl = 0
@@ -1660,14 +1809,21 @@ def ereignisse_verarbeiten():
             if ereignis.key == pygame.K_b:
                 for ein_gebaeude in liste_gebaeude:
                     if ein_gebaeude["typ"] == 0:  # 0 = Basis
-                        # Mitte der Basis-Kachel berechnen
-                        ziel_x = ein_gebaeude["kachel_x"] * KACHEL_GROESSE
-                        ziel_y = ein_gebaeude["kachel_y"] * KACHEL_GROESSE
+                        # Mitte der Basis-Kachel berechnen (Iso: Rautenecke,
+                        # sonst: linke obere Rechteckecke).
+                        if ISO_ANSICHT:
+                            ziel_x, ziel_y = iso.raster_zu_welt(
+                                ein_gebaeude["kachel_x"], ein_gebaeude["kachel_y"])
+                            kachel_halb = iso.ISO_HALB_BREITE
+                        else:
+                            ziel_x = ein_gebaeude["kachel_x"] * KACHEL_GROESSE
+                            ziel_y = ein_gebaeude["kachel_y"] * KACHEL_GROESSE
+                            kachel_halb = KACHEL_GROESSE // 2
                         # Kamera zentrieren: Ziel in die Mitte des sichtbaren Spielfelds
                         # unter der Ressourcenleiste (Fenster-Mitte minus HUD minus halbe Kachel)
-                        kamera_x = ziel_x - BILD_BREITE // 2 + KACHEL_GROESSE // 2
+                        kamera_x = ziel_x - BILD_BREITE // 2 + kachel_halb
                         kamera_y = (ziel_y - (BILD_HOEHE - hud.HUD_HOEHE) // 2
-                            + KACHEL_GROESSE // 2)
+                            + kachel_halb)
                         kamera_begrenzen()  # Nicht über den Rand scrollen!
                         print(f"Kamera zur Basis gesprungen! ({ziel_x}, {ziel_y})")
                         break  # Nur die erste Basis suchen
@@ -1735,12 +1891,11 @@ def ereignisse_verarbeiten():
             if ereignis.button == 1:  # 1 = linke Maustaste
 
                 maus_x, maus_y = ereignis.pos
-                # Bildschirm-Position -> Kachel-Position umrechnen
-                # (Kamera-Versatz addieren, dann durch Kachelgröße teilen).
+                # Bildschirm-Position -> Kachel-Position umrechnen.
+                # maus_zu_kachel() kennt beide Ansichten (2D und Iso).
                 # y nutzt kamera_zeichnen_y() — die Welt liegt um das HUD
                 # versetzt, siehe Definition der Funktion.
-                kachel_x = (maus_x + kamera_x) // KACHEL_GROESSE
-                kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
+                kachel_x, kachel_y = maus_zu_kachel(maus_x, maus_y)
                 
                 # ── STUNDE 8: Boden-Typ der Kachel prüfen ──────────────────
                 # Hole den Bodentyp der angeklickten Kachel
@@ -1823,8 +1978,8 @@ def ereignisse_verarbeiten():
             # ereignis.button == 3 ist die RECHTE Maustaste.
             elif ereignis.button == 3:
                 maus_x, maus_y = ereignis.pos
-                kachel_x = (maus_x + kamera_x) // KACHEL_GROESSE
-                kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
+                # Wie beim Bauen: maus_zu_kachel() kennt beide Ansichten.
+                kachel_x, kachel_y = maus_zu_kachel(maus_x, maus_y)
 
                 # 1. Gebäude von der Kachel entfernen.
                 #    gebaeude_abreissen() gibt den typ_index zurück oder None.
