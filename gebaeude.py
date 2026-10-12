@@ -2,6 +2,7 @@
 
 import os
 import pygame
+import iso           # Isometrische Ansicht: Rauten und Sortierung (Schritt 4)
 import forschung
 
 
@@ -62,10 +63,22 @@ GEBAEUDE_KATEGORIEN = {
 
 _fenster = None
 _kachel_groesse = 48
+_iso_ansicht = True    # True = Rauten (Schritt 4), False = alte Rechtecke
 _bilder = {}
 _bilder_cache = {}
 _kuerzel_cache = {}
 _schrift = None
+
+
+def ansicht_setzen(iso_an):
+    """Schaltet die Gebaeude-Ansicht um (fuer den Unterrichts-Vergleich).
+
+    main.py gibt hier ISO_ANSICHT weiter, damit beide Dateien dieselbe
+    Ansicht zeigen. Ohne diese Funktion muesste gebaeude.py die Konstante
+    aus main.py importieren — das gaebe einen Kreis-Import.
+    """
+    global _iso_ansicht
+    _iso_ansicht = bool(iso_an)
 
 
 def gebaeude_initialisieren(fenster_obj, kachel_groesse):
@@ -234,10 +247,159 @@ def _warnsymbol_zeichnen(rect):
     _fenster.blit(zeichen, zeichen.get_rect(center=(links + 7, unten - 5)))
 
 
+def _quader_zeichnen(farbe, fuss_x, fuss_y, breite, hoehe):
+    """Zeichnet einen einfachen Iso-Quader als Gebaeude-Ersatz.
+
+    Manche Gebaeudetypen haben (noch) kein Bild — statt eines flachen
+    Rechtecks malen wir einen kleinen Klotz: helle Oberseite, linke Seite
+    dunkler, rechte Seite am dunkelsten. So erkennt man sofort, dass das
+    ein Platzhalter ist und kein fertiges Haus. Die Hoehe waechst mit der
+    Gebaeudegroesse (24 Pixel je Kachel).
+    """
+    kacheln = max(1, breite * hoehe // max(1, breite))
+    quader_hoehe = 24 * kacheln
+    halb = breite * iso.ISO_HALB_BREITE // 2
+    # Sechs Punkte beschreiben den Klotz: oben, zwei Schulter-Ecken,
+    # zwei Seiten-Ecken und die Fussspitze in der Mitte.
+    spitze = (fuss_x, fuss_y)
+    oben = (fuss_x, fuss_y - quader_hoehe - iso.ISO_HALB_HOEHE)
+    links = (fuss_x - halb, fuss_y - quader_hoehe // 2)
+    rechts = (fuss_x + halb, fuss_y - quader_hoehe // 2)
+    oben_links = (fuss_x - halb, oben[1] + iso.ISO_HALB_HOEHE)
+    oben_rechts = (fuss_x + halb, oben[1] + iso.ISO_HALB_HOEHE)
+    dunkel = tuple(max(0, kanal - 60) for kanal in farbe)
+    dunkler = tuple(max(0, kanal - 100) for kanal in farbe)
+    # Linke Seite (dunkler), rechte Seite (am dunkelsten), Dach (hell).
+    pygame.draw.polygon(_fenster, dunkel, [oben_links, oben, spitze, links])
+    pygame.draw.polygon(_fenster, dunkler, [oben, oben_rechts, rechts, spitze])
+    pygame.draw.polygon(_fenster, farbe, [oben_links, links, rechts, oben_rechts])
+    return pygame.Rect(fuss_x - halb, oben[1], halb * 2,
+                       spitze[1] - oben[1])
+
+
+def _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten, breite, hoehe,
+                            fuss_x, fuss_y, stapel_index):
+    """Baut das Bildschirm-Rechteck fuer ein Gebaeude in der Iso-Ansicht.
+
+    Das Bild steht als Billboard mit seiner unteren Mitte auf dem
+    Fusspunkt (untere Rautenecke der vordersten Kachel) und ist so breit
+    wie der Fussabdruck. Gestapelte Zweitgebaeude auf derselben Kachel
+    rutschen kleiner nach rechts oben, damit man beide noch sieht.
+    """
+    fuss_breite = max(breite, hoehe) * iso.ISO_KACHEL_BREITE // 2
+    if breite == 1 and hoehe == 1 and stapel_index:
+        bild_breite = iso.ISO_KACHEL_BREITE // 2 - 8
+        bild_hoehe = iso.ISO_KACHEL_HOEHE - 8
+        links = fuss_x + 6
+    else:
+        bild_breite = fuss_breite - 8
+        # Hoeher als breit: Haeuser duerfen in den Himmel ragen, damit man
+        # sie hintereinander noch erkennt (Universitaet nutzt das aus).
+        bild_hoehe = max(iso.ISO_KACHEL_HOEHE,
+                         bild_breite * 3 // 4) if (breite > 1 or hoehe > 1) \
+            else iso.ISO_KACHEL_HOEHE - 8
+        links = fuss_x - bild_breite // 2
+    oben = fuss_y - bild_hoehe
+    return pygame.Rect(links, oben, bild_breite, bild_hoehe)
+
+
+def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
+                             fuss_x, fuss_y, stapel_index, schrift):
+    """Zeichnet EIN Gebaeude in der Iso-Ansicht (Bild oder Quader).
+
+    Das Ergebnis ist das Bildschirm-Rechteck des Gebaeudes: Daran haengen
+    Kuerzel, Warn-Dreieck und roter Punkt — so verrutscht nichts.
+    """
+    if breite == 1 and hoehe == 1 and stapel_index:
+        # Zweites Gebaeude auf derselben Kachel: kleiner, rechts oben.
+        rect = _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten,
+                                       breite, hoehe, fuss_x, fuss_y,
+                                       stapel_index)
+        bild = bild_fuer_typ(typ_index, rect.size)
+        if bild is not None:
+            _fenster.blit(bild, rect)
+        else:
+            pygame.draw.rect(_fenster, typ_daten["farbe"], rect)
+    elif bild_fuer_typ(typ_index, (8, 8)) is not None:
+        # Normales Gebaeude mit Bild: Billboard auf dem Fusspunkt.
+        rect = _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten,
+                                       breite, hoehe, fuss_x, fuss_y,
+                                       stapel_index)
+        bild = bild_fuer_typ(typ_index, rect.size)
+        _fenster.blit(bild, rect)
+    else:
+        # Kein Bild vorhanden: Iso-Quader als Platzhalter.
+        rect = _quader_zeichnen(typ_daten["farbe"], fuss_x, fuss_y,
+                                max(1, breite), hoehe)
+    pygame.draw.rect(_fenster, (255, 255, 255), rect, 2)
+    text_schluessel = (typ_index, (20, 20, 20))
+    if text_schluessel not in _kuerzel_cache:
+        _kuerzel_cache[text_schluessel] = schrift.render(
+            typ_daten["kuerzel"], True, (20, 20, 20))
+    text = _kuerzel_cache[text_schluessel]
+    if breite == 1 and hoehe == 1:
+        _fenster.blit(text, text.get_rect(center=rect.center))
+    else:
+        _fenster.blit(text, (rect.left + 6, rect.top + 4))
+    if gebaeude.get("arbeitet") is False and typ_index not in (0, 9, 14, 17):
+        pygame.draw.circle(_fenster, (220, 70, 70),
+                           (rect.right - 7, rect.top + 7), 4)
+    # Fortgeschrittener Kurs (Logistik): Gelbes Warndreieck, wenn keine
+    # Strasse zur Basis fuehrt. Der Grund steht direkt im Gebaeude.
+    if gebaeude.get("stillstand_grund"):
+        _warnsymbol_zeichnen(rect)
+
+
+def _gebaeude_iso_zeichnen(liste_gebaeude, kamera_x, kamera_y, schrift):
+    """Zeichnet alle Gebaeude in der Iso-Ansicht (hinten zuerst).
+
+    Die Sortierung kommt aus iso.py und benutzt die vorderste Kachel des
+    Fussabdrucks — so ueberdeckt zum Beispiel die 2x3-Universitaet alles
+    hinter ihr und nichts vor ihr. Der Stapel-Zaehler laeuft ueber die
+    sortierte Liste: Das aendert nur, WELCHES der beiden Gebaeude kleiner
+    gemalt wird, nicht die Spiellogik.
+    """
+    # Der Schlüssel ist die belegte Kachel. So wird die Stapelposition in
+    # einem Durchlauf ermittelt, statt für jedes Gebäude die ganze Liste zu
+    # durchsuchen.
+    stapel_zaehler = {}
+    sortiert = iso.zeichen_reihenfolge(liste_gebaeude, _gebaeude_flaeche)
+    for gebaeude in sortiert:
+        typ_index = gebaeude["typ"]
+        typ_daten = GEBAEUDE_TYPEN[typ_index]
+        breite, hoehe = _masse_fuer_typ(typ_index)
+        stapel_index = 0
+        if breite == 1 and hoehe == 1:
+            stapel_schluessel = (gebaeude["kachel_x"], gebaeude["kachel_y"])
+            stapel_index = stapel_zaehler.get(stapel_schluessel, 0)
+            stapel_zaehler[stapel_schluessel] = stapel_index + 1
+        fuss_spalte, fuss_zeile = iso._fuss_vorne(gebaeude, _gebaeude_flaeche)
+        fuss_x, fuss_y = iso.kachel_unten_mitte(fuss_spalte, fuss_zeile,
+                                               kamera_x, kamera_y)
+        # Ganz ausserhalb des Bildes malen wir nichts (spart Rechenzeit).
+        if (fuss_x < -200 or fuss_x > _fenster.get_width() + 200
+                or fuss_y < -200 or fuss_y > _fenster.get_height() + 200):
+            continue
+        _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite,
+                                 hoehe, fuss_x, fuss_y, stapel_index, schrift)
+
+
+
 def gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_y):
+    """Zeichnet alle Gebaeude — in Iso hinten zuerst, sonst wie frueher.
+
+    Der Iso-Pfad sortiert die Gebaeude mit iso.zeichen_reihenfolge (nach
+    der vordersten Fussabdruck-Kachel) und malt jedes als Billboard oder
+    Quader. Der 2D-Pfad darunter ist der unveraenderte alte Code zum
+    Vergleichen im Unterricht. Die Stapel-Logik (zweites 1x1-Gebaeude auf
+    derselben Kachel) gibt es in beiden Pfaden.
+    """
     if _fenster is None:
         return
     schrift = _schrift or pygame.font.Font(None, 23)
+    if _iso_ansicht:
+        _gebaeude_iso_zeichnen(liste_gebaeude, kamera_x, kamera_y, schrift)
+        return
     # Der Schlüssel ist die belegte Kachel. So wird die Stapelposition in
     # einem Durchlauf ermittelt, statt für jedes Gebäude die ganze Liste zu
     # durchsuchen.

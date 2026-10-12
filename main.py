@@ -2138,6 +2138,8 @@ def spiel_starten():
     print("Initialisiere Menüs und Spielmodule...")
     sterne_generieren()
     gebaeude.gebaeude_initialisieren(fenster, KACHEL_GROESSE)
+    # Iso-Schritt 4: Gebaeude-Ansicht folgt dem Schalter in main.py.
+    gebaeude.ansicht_setzen(ISO_ANSICHT)
     hud.hud_initialisieren(fenster)
     menu.menu_initialisieren(fenster)
     spiel_menue.menue_initialisieren(fenster)
