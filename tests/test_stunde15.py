@@ -32,7 +32,7 @@ bilder_ordner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 assert len(gebaeude.GEBAEUDE_TYPEN) == len(ressourcen.GEBAEUDE_WIRTSCHAFT)
 assert gebaeude.GEBAEUDE_TYPEN[19]["name"] == "Park"
 assert gebaeude.GEBAEUDE_TYPEN[20]["name"] == "Solarreaktor"
-assert os.path.exists(os.path.join(bilder_ordner, "park_32x32.png"))
+assert os.path.exists(os.path.join(bilder_ordner, "park.png"))
 assert os.path.exists(os.path.join(bilder_ordner, "solareaktor_32x32.png"))
 assert 19 in gebaeude.GEBAEUDE_KATEGORIEN["9"]["typen"]
 assert 20 in gebaeude.GEBAEUDE_KATEGORIEN["6"]["typen"]

@@ -16,7 +16,7 @@ GEBAEUDE_TYPEN = [
     {"name": "Steinmetz", "bild": "steinmetz.png", "farbe": (140, 140, 150), "kuerzel": "S", "taste": "5", "breite": 1, "hoehe": 1},
     {"name": "Marktplatz", "bild": "marktplatz.png", "farbe": (220, 180, 80), "kuerzel": "M", "taste": "6", "breite": 1, "hoehe": 1},
     {"name": "Wohnhaus", "bild": "wohnhaus.png", "farbe": (180, 120, 200), "kuerzel": "W", "taste": "7", "breite": 1, "hoehe": 1},
-    {"name": "Universitaet", "bild": "schule_2x3_kacheln_64x96.png", "farbe": (150, 200, 255), "kuerzel": "L", "taste": "8", "breite": 2, "hoehe": 3},
+    {"name": "Universitaet", "bild": "universitaet.png", "farbe": (150, 200, 255), "kuerzel": "L", "taste": "8", "breite": 2, "hoehe": 3},
     {"name": "Mine", "bild": "mine.png", "farbe": (110, 110, 120), "kuerzel": "M", "taste": "9", "breite": 1, "hoehe": 1},
     {"name": "Strasse", "bild": "strasse.png", "farbe": (90, 90, 95), "kuerzel": "S", "taste": "0", "breite": 1, "hoehe": 1},
     {"name": "Fusionsreaktor", "bild": "fusionsreaktor.png", "farbe": (255, 110, 210), "kuerzel": "F", "taste": "G", "breite": 1, "hoehe": 1},
@@ -30,9 +30,9 @@ GEBAEUDE_TYPEN = [
     # Das Bild nutzt zunächst die vorhandene Mine als Platzhalter. So kann
     # die Klasse die Funktion sofort testen; ein eigenes Bild ist später eine
     # geeignete Schüler-Erweiterung.
-    {"name": "Eisenmine", "bild": "mine.png", "farbe": (210, 130, 90), "kuerzel": "E", "taste": "", "breite": 1, "hoehe": 1},
+    {"name": "Eisenmine", "bild": "mine_eisen.png", "farbe": (210, 130, 90), "kuerzel": "E", "taste": "", "breite": 1, "hoehe": 1},
     # Schülergebäude: Der Park verbessert die Versorgung der Bevölkerung.
-    {"name": "Park", "bild": "park_32x32.png", "farbe": (80, 190, 100), "kuerzel": "P", "taste": "", "breite": 1, "hoehe": 1},
+    {"name": "Park", "bild": "park.png", "farbe": (80, 190, 100), "kuerzel": "P", "taste": "", "breite": 1, "hoehe": 1},
     # Schülergebäude: Der Solarreaktor liefert Energie ohne Kohleverbrauch.
     {"name": "Solarreaktor", "bild": "solareaktor_32x32.png", "farbe": (70, 170, 240), "kuerzel": "S", "taste": "", "breite": 1, "hoehe": 1},
     # ── Fortgeschrittener Kurs (Gegner): Verteidigung, Indizes 21 bis 23 ─────
