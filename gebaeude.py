@@ -254,11 +254,11 @@ def _quader_zeichnen(farbe, fuss_x, fuss_y, breite, hoehe):
     Rechtecks malen wir einen kleinen Klotz: helle Oberseite, linke Seite
     dunkler, rechte Seite am dunkelsten. So erkennt man sofort, dass das
     ein Platzhalter ist und kein fertiges Haus. Die Hoehe waechst mit der
-    Gebaeudegroesse (24 Pixel je Kachel).
+    Gebaeudegroesse.
     """
     kacheln = max(1, breite * hoehe // max(1, breite))
-    quader_hoehe = 24 * kacheln
-    halb = breite * iso.ISO_HALB_BREITE // 2
+    quader_hoehe = 32 * kacheln
+    halb = breite * iso.ISO_KACHEL_BREITE // 4   # halbe Kachelbreite (48)
     # Sechs Punkte beschreiben den Klotz: oben, zwei Schulter-Ecken,
     # zwei Seiten-Ecken und die Fussspitze in der Mitte.
     spitze = (fuss_x, fuss_y)
@@ -282,22 +282,25 @@ def _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten, breite, hoehe,
     """Baut das Bildschirm-Rechteck fuer ein Gebaeude in der Iso-Ansicht.
 
     Das Bild steht als Billboard mit seiner unteren Mitte auf dem
-    Fusspunkt (untere Rautenecke der vordersten Kachel) und ist so breit
-    wie der Fussabdruck. Gestapelte Zweitgebaeude auf derselben Kachel
-    rutschen kleiner nach rechts oben, damit man beide noch sieht.
+    Fusspunkt (untere Rautenecke der vordersten Kachel) und fuegt sich
+    in die Iso-Kachel ein: Die Breite passt zur Kachelbreite (96px), die
+    Hoehe ragt nach oben, damit Gebaeude raumlich wirken.
     """
-    fuss_breite = max(breite, hoehe) * iso.ISO_KACHEL_BREITE // 2
+    kachel_breite = iso.ISO_KACHEL_BREITE    # 96
+    kachel_hoehe = iso.ISO_KACHEL_HOEHE      # 48
+
     if breite == 1 and hoehe == 1 and stapel_index:
-        bild_breite = iso.ISO_KACHEL_BREITE // 2 - 8
-        bild_hoehe = iso.ISO_KACHEL_HOEHE - 8
+        # Zweites Gebaeude auf derselben Kachel: kleiner, rechts oben.
+        bild_breite = kachel_breite // 2 - 8
+        bild_hoehe = kachel_hoehe * 2 - 8
         links = fuss_x + 6
     else:
-        bild_breite = fuss_breite - 8
-        # Hoeher als breit: Haeuser duerfen in den Himmel ragen, damit man
-        # sie hintereinander noch erkennt (Universitaet nutzt das aus).
-        bild_hoehe = max(iso.ISO_KACHEL_HOEHE,
-                         bild_breite * 3 // 4) if (breite > 1 or hoehe > 1) \
-            else iso.ISO_KACHEL_HOEHE - 8
+        # Normales Gebaeude: Breite fuellt die Kachel (fast) aus.
+        bild_breite = max(breite, hoehe) * kachel_breite - 8
+        # Hoehe: Gebaeude ragen nach oben, damit sie hintereinander erkennbar
+        # sind (Universitaet nutzt das aus).
+        bild_hoehe = max(kachel_hoehe * 2, bild_breite * 3 // 4) \
+            if (breite > 1 or hoehe > 1) else kachel_hoehe * 2 - 8
         links = fuss_x - bild_breite // 2
     oben = fuss_y - bild_hoehe
     return pygame.Rect(links, oben, bild_breite, bild_hoehe)
