@@ -334,7 +334,8 @@ def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
         # Kein Bild vorhanden: Iso-Quader als Platzhalter.
         rect = _quader_zeichnen(typ_daten["farbe"], fuss_x, fuss_y,
                                 max(1, breite), hoehe)
-    pygame.draw.rect(_fenster, (255, 255, 255), rect, 2)
+    # Der weisse Rahmen wurde entfernt, da die gedrehten Gebaeude-Bilder
+    # aus terra_nova_24_gebaeude_pngs bereits saubere eigene Rander haben.
     text_schluessel = (typ_index, (20, 20, 20))
     if text_schluessel not in _kuerzel_cache:
         _kuerzel_cache[text_schluessel] = schrift.render(

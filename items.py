@@ -14,15 +14,15 @@ import iso
 # Jeder Gegenstandstyp hat ein Bild, eine Farbe und eine Fussabdruck-Groesse.
 ITEM_TYPEN = [
     {"name": "Goldvorkommen", "bild": None, "farbe": (255, 215, 0), "kuerzel": "G",
-     "breite": 1, "hoehe": 1},
+     "breite": 1, "hoehe": 1, "ressource": "gold", "menge": 50},
     {"name": "Holzhaufen", "bild": None, "farbe": (139, 69, 19), "kuerzel": "H",
-     "breite": 1, "hoehe": 1},
+     "breite": 1, "hoehe": 1, "ressource": "holz", "menge": 30},
     {"name": "Steinhaufen", "bild": None, "farbe": (128, 128, 128), "kuerzel": "S",
-     "breite": 1, "hoehe": 1},
+     "breite": 1, "hoehe": 1, "ressource": "stein", "menge": 25},
     {"name": "Kristall", "bild": None, "farbe": (200, 100, 255), "kuerzel": "K",
-     "breite": 1, "hoehe": 1},
+     "breite": 1, "hoehe": 1, "ressource": "forschung", "menge": 10},
     {"name": "Grosser Fels", "bild": None, "farbe": (100, 100, 110), "kuerzel": "F",
-     "breite": 2, "hoehe": 2},
+     "breite": 2, "hoehe": 2, "ressource": "stein", "menge": 60},
 ]
 
 _fenster = None
@@ -75,6 +75,37 @@ def item_flaeche(typ_index, kachel_x, kachel_y):
 
 def _item_flaeche(item):
     return item_flaeche(item["typ"], item["kachel_x"], item["kachel_y"])
+
+
+def item_am_punkt(kachel_x, kachel_y, liste_items):
+    """Findet das Item, dessen Fussabdruck die Kachel (kachel_x, kachel_y) enthaelt.
+
+    Gibt das Item-Dict (oder None) zurueck. Das erste passende Item in
+    der Liste wird genommen (bei Stapelung auf einer Kachel).
+    """
+    for item in liste_items:
+        if (kachel_x, kachel_y) in item_flaeche(item["typ"], item["kachel_x"],
+                                                 item["kachel_y"]):
+            return item
+    return None
+
+
+def item_abbauen(item):
+    """Liefert die Ressourcen, die das Item beim Abbau gibt.
+
+    Rueckgabe: dict wie {"gold": 50} oder {} bei unbekanntem Typ.
+    Die Liste liste_items wird NICHT veraendert — der Aufrufer entfernt
+    das Item selbst (damit main.py die gleiche Referenz nutzt).
+    """
+    typ_index = item["typ"]
+    if typ_index < 0 or typ_index >= len(ITEM_TYPEN):
+        return {}
+    typ_daten = ITEM_TYPEN[typ_index]
+    ressource = typ_daten.get("ressource")
+    menge = typ_daten.get("menge", 0)
+    if not ressource or menge <= 0:
+        return {}
+    return {ressource: menge}
 
 
 def zeichnen(liste_items, kamera_x, kamera_y):
