@@ -13,15 +13,15 @@ import iso
 
 # Jeder Gegenstandstyp hat ein Bild, eine Farbe und eine Fussabdruck-Groesse.
 ITEM_TYPEN = [
-    {"name": "Goldvorkommen", "bild": None, "farbe": (255, 215, 0), "kuerzel": "G",
+    {"name": "Goldvorkommen", "bild": "gold.png", "farbe": (255, 215, 0), "kuerzel": "G",
      "breite": 1, "hoehe": 1, "ressource": "gold", "menge": 50},
-    {"name": "Holzhaufen", "bild": None, "farbe": (139, 69, 19), "kuerzel": "H",
+    {"name": "Holzhaufen", "bild": "holz.png", "farbe": (139, 69, 19), "kuerzel": "H",
      "breite": 1, "hoehe": 1, "ressource": "holz", "menge": 30},
-    {"name": "Steinhaufen", "bild": None, "farbe": (128, 128, 128), "kuerzel": "S",
+    {"name": "Steinhaufen", "bild": "stein_item.png", "farbe": (128, 128, 128), "kuerzel": "S",
      "breite": 1, "hoehe": 1, "ressource": "stein", "menge": 25},
-    {"name": "Kristall", "bild": None, "farbe": (200, 100, 255), "kuerzel": "K",
+    {"name": "Kristall", "bild": "kristall.png", "farbe": (200, 100, 255), "kuerzel": "K",
      "breite": 1, "hoehe": 1, "ressource": "forschung", "menge": 10},
-    {"name": "Grosser Fels", "bild": None, "farbe": (100, 100, 110), "kuerzel": "F",
+    {"name": "Grosser Fels", "bild": "fels.png", "farbe": (100, 100, 110), "kuerzel": "F",
      "breite": 2, "hoehe": 2, "ressource": "stein", "menge": 60},
 ]
 
@@ -50,7 +50,7 @@ def item_initialisieren(fenster_obj, kachel_groesse):
     _fenster = fenster_obj
     _kachel_groesse = kachel_groesse
     _schrift = pygame.font.Font(None, 23)
-    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder")
+    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "items")
     _bilder = {}
     for typ_daten in ITEM_TYPEN:
         dateiname = typ_daten.get("bild")

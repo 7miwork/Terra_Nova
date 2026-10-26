@@ -68,6 +68,7 @@ Heute in Stunde 9 lernen wir NEU dazu (die Verbesserungsvorschläge der Schüler
 =============================================================================
 """
 
+import os
 import pygame
 import sys
 import random       # Für zufällige Planeten-Generation
@@ -132,6 +133,93 @@ BAU_FELD_START_X = (WELT_BREITE - BAU_BREITE) // 2   # = 70
 BAU_FELD_START_Y = (WELT_HOEHE - BAU_HOEHE) // 2     # = 55
 BAU_FELD_ENDE_X  = BAU_FELD_START_X + BAU_BREITE     # = 130
 BAU_FELD_ENDE_Y  = BAU_FELD_START_Y + BAU_HOEHE      # = 95
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# CHUNK-SYSTEM FÜR ENDLOSE WELT
+# Die Welt wird in Chunks unterteilt. Jeder Chunk muss einzeln gekauft werden,
+# bevor darauf gebaut werden darf. Der mittlere Chunk ist kostenlos.
+# Forschung schaltet neue Chunks zum Kauf frei. Kosten steigen mit jedem Kauf.
+# ══════════════════════════════════════════════════════════════════════════════════════
+CHUNK_GROESSE = 25                      # Kacheln pro Chunk (Quadratisch)
+WELT_CHUNK_BREITE = WELT_BREITE // CHUNK_GROESSE   # 8
+WELT_CHUNK_HOEHE = WELT_HOEHE // CHUNK_GROESSE    # 6
+CHUNK_BASISKOSTEN = {"gold": 150, "stein": 60, "holz": 40}  # Kosten für 1. Chunk
+CHUNK_KOSTEN_MULTIPLIKATOR = 1.6          # Jeder weitere Chunk ist teurer
+CHUNK_NACHBARN = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+# Zustand — Chunk-Besitz
+besitzte_chunks = set()       # Gekaufte Chunks: {(chunk_x, chunk_y), ...}
+freigeschaltete_chunks = set()  # Durch Forschung zum Kauf freigegebene Chunks
+chunks_gekauft = 0            # Anzahl gekaufter Chunks (für Kostensteigerung)
+
+# Start-Chunk (mitte der Welt) gehört automatisch zum Besitz
+START_CHUNK_X = WELT_CHUNK_BREITE // 2   # 4
+START_CHUNK_Y = WELT_CHUNK_HOEHE // 2    # 3
+besitzte_chunks.add((START_CHUNK_X, START_CHUNK_Y))
+
+
+def chunk_fuer_kachel(kachel_x, kachel_y):
+    """Berechnet den Chunk für eine Kachelkoordinate."""
+    return kachel_x // CHUNK_GROESSE, kachel_y // CHUNK_GROESSE
+
+
+def kachel_in_besitztem_chunk(kachel_x, kachel_y):
+    """Prüft, ob die Kachel in einem bereits besitzten Chunk liegt."""
+    cx, cy = chunk_fuer_kachel(kachel_x, kachel_y)
+    return (cx, cy) in besitzte_chunks
+
+
+def chunk_kann_gekauft_werden(chunk_x, chunk_y):
+    """Prüft, ob ein Chunk gekauft werden kann.
+
+    Bedingungen:
+    1. Noch nicht im Besitz
+    2. Durch Forschung freigeschaltet
+    3. Benachbart zu einem bereits besitzten Chunk (8-Nachbarschaft)
+    """
+    if (chunk_x, chunk_y) in besitzte_chunks:
+        return False, "Dieser Chunk gehört bereits dir."
+    if (chunk_x, chunk_y) not in freigeschaltete_chunks:
+        return False, "Dieser Chunk ist noch nicht freigeschaltet."
+    for dx, dy in CHUNK_NACHBARN:
+        if (chunk_x + dx, chunk_y + dy) in besitzte_chunks:
+            return True, ""
+    return False, "Dieser Chunk liegt nicht neben deinem Gebiet."
+
+
+def chunk_kosten_berechnen(chunks_gekauft_anzahl):
+    """Berechnet die Kosten für den nächsten Chunk-Kauf.
+
+    Jeder weitere Chunk ist teurer (Multiplikator potenziert mit Kaufanzahl).
+    """
+    faktor = CHUNK_KOSTEN_MULTIPLIKATOR ** chunks_gekauft_anzahl
+    kosten = {}
+    for name, basis in CHUNK_BASISKOSTEN.items():
+        kosten[name] = max(1, int(basis * faktor))
+    return kosten
+
+
+def chunk_kaufen(chunk_x, chunk_y, ressourcen_dict):
+    """Kauft einen Chunk, wenn möglich.
+
+    Gibt (erfolg, meldung) zurück.
+    """
+    global chunks_gekauft
+    kann, grund = chunk_kann_gekauft_werden(chunk_x, chunk_y)
+    if not kann:
+        return False, grund
+    kosten = chunk_kosten_berechnen(chunks_gekauft)
+    fehlende = [f"{name}: {menge}" for name, menge in kosten.items()
+                if ressourcen_dict.get(name, 0) < menge]
+    if fehlende:
+        return False, "Rohstoffe fehlen: " + ", ".join(fehlende)
+    for name, menge in kosten.items():
+        ressourcen_dict[name] -= menge
+    besitzte_chunks.add((chunk_x, chunk_y))
+    chunks_gekauft += 1
+    return True, f"Chunk ({chunk_x}, {chunk_y}) gekauft!"
+
+
 KAMERA_SPEED    = 8          # Kamera-Scrolltempo in Pixeln (Standard bei 60 FPS; im Einstellungsmenü änderbar)
 
 # ── Farben — Weltraum (Hintergrund) ───────────────────────────────────────
@@ -488,6 +576,32 @@ BODEN_FARBEN = {
     3: FARBE_SAND,
 }
 
+# ── Boden-Texturen (Bilder statt einfarbiger Rechtecke) ──────────────────────
+# Die Bilder liegen unter bilder/terrain/ und werden 1:1 auf Kacheln skaliert.
+BODEN_BILDER = {}
+_boden_bilder_geladen = False
+
+
+def _boden_bilder_laden():
+    """Laedt die Boden-Texturen aus bilder/terrain/ einmalig."""
+    global _boden_bilder_geladen
+    if _boden_bilder_geladen:
+        return
+    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "terrain")
+    dateinamen = {
+        0: "erde.png",
+        1: "gras.png",
+        2: "stein.png",
+        3: "sand.png",
+    }
+    for typ_index, dateiname in dateinamen.items():
+        bild_pfad = os.path.join(bilder_ordner, dateiname)
+        if os.path.exists(bild_pfad):
+            bild = pygame.image.load(bild_pfad).convert_alpha()
+            BODEN_BILDER[typ_index] = bild
+    _boden_bilder_geladen = True
+
+
 
 def _farbe_dunkler(farbe, anteil=0.6):
     """Macht eine Farbe dunkler (fuer die Erdwand an der Vorderkante).
@@ -512,8 +626,15 @@ def _karte_2d_zeichnen(gitter_an, erste_spalte, letzte_spalte,
             pixel_x = spalte * KACHEL_GROESSE - kamera_x
             kachel_rect = pygame.Rect(
                 pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            pygame.draw.rect(
-                fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
+            _boden_bilder_laden()
+            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
+            if _boden_bild is not None:
+                fenster.blit(
+                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
+                    kachel_rect)
+            else:
+                pygame.draw.rect(
+                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
             if gitter_an:
                 pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
 
@@ -545,7 +666,14 @@ def _karte_iso_zeichnen(gitter_an):
     kacheln.sort(key=lambda kachel: (kachel[0] + kachel[1], kachel[1]))
     for spalte, zeile in kacheln:
         punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
-        pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
+        _boden_bilder_laden()
+        _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
+        if _boden_bild is not None:
+            bild_skaliert = pygame.transform.scale(
+                _boden_bild, (iso.ISO_KACHEL_BREITE, iso.ISO_KACHEL_HOEHE))
+            fenster.blit(bild_skaliert, (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
+        else:
+            pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
                             punkte)
         if gitter_an:
             pygame.draw.polygon(fenster, FARBE_GITTER, punkte, 1)
@@ -629,8 +757,15 @@ def karte_zeichnen():
             pixel_x = spalte * KACHEL_GROESSE - kamera_x
             kachel_rect = pygame.Rect(
                 pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            pygame.draw.rect(
-                fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
+            _boden_bilder_laden()
+            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
+            if _boden_bild is not None:
+                fenster.blit(
+                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
+                    kachel_rect)
+            else:
+                pygame.draw.rect(
+                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
             if gitter_an:
                 pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
 
@@ -1067,6 +1202,32 @@ BODEN_FARBEN = {
     3: FARBE_SAND,
 }
 
+# ── Boden-Texturen (Bilder statt einfarbiger Rechtecke) ──────────────────────
+# Die Bilder liegen unter bilder/terrain/ und werden 1:1 auf Kacheln skaliert.
+BODEN_BILDER = {}
+_boden_bilder_geladen = False
+
+
+def _boden_bilder_laden():
+    """Laedt die Boden-Texturen aus bilder/terrain/ einmalig."""
+    global _boden_bilder_geladen
+    if _boden_bilder_geladen:
+        return
+    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "terrain")
+    dateinamen = {
+        0: "erde.png",
+        1: "gras.png",
+        2: "stein.png",
+        3: "sand.png",
+    }
+    for typ_index, dateiname in dateinamen.items():
+        bild_pfad = os.path.join(bilder_ordner, dateiname)
+        if os.path.exists(bild_pfad):
+            bild = pygame.image.load(bild_pfad).convert_alpha()
+            BODEN_BILDER[typ_index] = bild
+    _boden_bilder_geladen = True
+
+
 
 def _farbe_dunkler(farbe, anteil=0.6):
     """Macht eine Farbe dunkler (fuer die Erdwand an der Vorderkante).
@@ -1091,8 +1252,15 @@ def _karte_2d_zeichnen(gitter_an, erste_spalte, letzte_spalte,
             pixel_x = spalte * KACHEL_GROESSE - kamera_x
             kachel_rect = pygame.Rect(
                 pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            pygame.draw.rect(
-                fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
+            _boden_bilder_laden()
+            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
+            if _boden_bild is not None:
+                fenster.blit(
+                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
+                    kachel_rect)
+            else:
+                pygame.draw.rect(
+                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
             if gitter_an:
                 pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
 
@@ -1124,7 +1292,14 @@ def _karte_iso_zeichnen(gitter_an):
     kacheln.sort(key=lambda kachel: (kachel[0] + kachel[1], kachel[1]))
     for spalte, zeile in kacheln:
         punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
-        pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
+        _boden_bilder_laden()
+        _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
+        if _boden_bild is not None:
+            bild_skaliert = pygame.transform.scale(
+                _boden_bild, (iso.ISO_KACHEL_BREITE, iso.ISO_KACHEL_HOEHE))
+            fenster.blit(bild_skaliert, (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
+        else:
+            pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
                             punkte)
         if gitter_an:
             pygame.draw.polygon(fenster, FARBE_GITTER, punkte, 1)
@@ -1184,8 +1359,15 @@ def karte_zeichnen():
             pixel_x = spalte * KACHEL_GROESSE - kamera_x
             kachel_rect = pygame.Rect(
                 pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            pygame.draw.rect(
-                fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
+            _boden_bilder_laden()
+            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
+            if _boden_bild is not None:
+                fenster.blit(
+                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
+                    kachel_rect)
+            else:
+                pygame.draw.rect(
+                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
             if gitter_an:
                 pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
 
@@ -1638,6 +1820,7 @@ def spielstand_laden():
     global spiel_status, spiel_ende_titel, spiel_ende_grund
     global _null_nahrung_ticks, _null_energie_ticks, _regel_auswahl
     global _hintergrund_surface
+    global besitzte_chunks, freigeschaltete_chunks, chunks_gekauft
 
     daten, meldung = spielstand.laden()
     if daten is None:
@@ -2528,13 +2711,29 @@ def ereignisse_verarbeiten():
                 # y nutzt kamera_zeichnen_y() — die Welt liegt um das HUD
                 # versetzt, siehe Definition der Funktion.
                 kachel_x, kachel_y = maus_zu_kachel(maus_x, maus_y)
+
+                # -- Chunk-Kauf: Wenn Kachel ausserhalb des eigenen Gebiets liegt --
+                # wird versucht, den zugehoerigen Chunk zu kaufen, statt zu bauen.
+                if not kachel_in_besitztem_chunk(kachel_x, kachel_y):
+                    cx, cy = chunk_fuer_kachel(kachel_x, kachel_y)
+                    if 0 <= cx < WELT_CHUNK_BREITE and 0 <= cy < WELT_CHUNK_HOEHE:
+                        erfolg, meldung = chunk_kaufen(cx, cy, ressourcen_dict)
+                        hud.meldung_anzeigen(meldung)
+                        if erfolg:
+                            ton.sound_abspielen("bauen")
+                        else:
+                            ton.sound_abspielen("fehler")
+                    else:
+                        hud.meldung_anzeigen("Diese Kachel liegt ausserhalb der Welt.")
+                        ton.sound_abspielen("fehler")
+                    continue
                 
                 # ── STUNDE 8: Boden-Typ der Kachel prüfen ──────────────────
                 # Hole den Bodentyp der angeklickten Kachel
-                if BAU_FELD_START_Y <= kachel_y < BAU_FELD_ENDE_Y and BAU_FELD_START_X <= kachel_x < BAU_FELD_ENDE_X:
+                if kachel_in_besitztem_chunk(kachel_x, kachel_y):
                     boden_typ = karten_daten[kachel_y][kachel_x]
                 else:
-                    boden_typ = None  # Außerhalb der Karte
+                    boden_typ = None  # Außerhalb des eigenen Gebiets
                 
                 # ── Stunde 11: Terraforming vor dem normalen Bauen ────────
                 if _terraform_modus:
@@ -2561,7 +2760,7 @@ def ereignisse_verarbeiten():
                     ressourcen_dict, gebaeude_auswahl)
                 bauplatz_frei = gebaeude.kann_platzieren(
                     liste_gebaeude, gebaeude_auswahl, kachel_x, kachel_y,
-                    BAU_BREITE, BAU_HOEHE)
+                    WELT_BREITE, WELT_HOEHE)
                 baukosten_fehlen = ressourcen.fehlende_baukosten(
                     ressourcen_dict, gebaeude_auswahl)
 
@@ -2571,7 +2770,7 @@ def ereignisse_verarbeiten():
                     ton.sound_abspielen("fehler")
                 elif not bauplatz_frei:
                     hud.meldung_anzeigen(
-                        f"{gebaeude_name}: Bauplatz ist belegt, ungeeignet oder außerhalb der Karte.")
+                        f"{gebaeude_name}: Bauplatz ist belegt, ungeeignet oder außerhalb des eigenen Gebiets.")
                     ton.sound_abspielen("fehler")
                 elif baukosten_fehlen:
                     hud.meldung_anzeigen(
@@ -2584,7 +2783,7 @@ def ereignisse_verarbeiten():
                                                    gebaeude_auswahl)
                     gebaut = gebaeude.gebaeude_platzieren(
                         liste_gebaeude, gebaeude_auswahl, kachel_x, kachel_y,
-                        BAU_BREITE, BAU_HOEHE)
+                        WELT_BREITE, WELT_HOEHE)
                     if gebaut:
                         _letztes_gebaeude = gebaeude_auswahl
                         # Fortgeschrittener Kurs: kurzer Bau-Sound.
@@ -2612,6 +2811,22 @@ def ereignisse_verarbeiten():
                 maus_x, maus_y = ereignis.pos
                 # Wie beim Bauen: maus_zu_kachel() kennt beide Ansichten.
                 kachel_x, kachel_y = maus_zu_kachel(maus_x, maus_y)
+
+                # -- Chunk-Kauf: Wenn Kachel ausserhalb des eigenen Gebiets liegt --
+                # wird versucht, den zugehoerigen Chunk zu kaufen, statt zu bauen.
+                if not kachel_in_besitztem_chunk(kachel_x, kachel_y):
+                    cx, cy = chunk_fuer_kachel(kachel_x, kachel_y)
+                    if 0 <= cx < WELT_CHUNK_BREITE and 0 <= cy < WELT_CHUNK_HOEHE:
+                        erfolg, meldung = chunk_kaufen(cx, cy, ressourcen_dict)
+                        hud.meldung_anzeigen(meldung)
+                        if erfolg:
+                            ton.sound_abspielen("bauen")
+                        else:
+                            ton.sound_abspielen("fehler")
+                    else:
+                        hud.meldung_anzeigen("Diese Kachel liegt ausserhalb der Welt.")
+                        ton.sound_abspielen("fehler")
+                    continue
 
                 # Schritt 5 (Items): Rechtsklick auf ein Item = abbauen.
                 # Items haben Vorrang vor Gebäuden, weil sie auf dem Boden

@@ -162,6 +162,26 @@ TECHNOLOGIEN = [
     {"id": "schutzschilde", "name": "Schutzschilde", "kategorie": "Verteidigung",
      "beschreibung": "Energiefelder erhöhen die Verteidigungsstärke der Kolonie um 25 Prozent.", "kosten": 150, "zeit": 32,
      "voraussetzung": "laserverteidigung", "schaltet_gebaeude_frei": None},
+    # ── Erweiterung: Kolonieausdehnung (Chunks) ──
+    {"id": "kolonieausdehnung_1", "name": "Kolonieausdehnung I", "kategorie": "Erweiterung",
+     "beschreibung": "Schaltet benachbarte Chunks zum Kauf frei. Die Kolonie kann jetzt wachsen.",
+     "kosten": 60, "zeit": 15, "voraussetzung": None, "schaltet_gebaeude_frei": None,
+     "freigebe_chunks": [(3, 2), (5, 2), (4, 1), (4, 3)]},
+    {"id": "kolonieausdehnung_2", "name": "Kolonieausdehnung II", "kategorie": "Erweiterung",
+     "beschreibung": "Schaltet weitere Chunks zum Kauf frei. Die Kolonie wächst.",
+     "kosten": 120, "zeit": 25, "voraussetzung": "kolonieausdehnung_1", "schaltet_gebaeude_frei": None,
+     "freigebe_chunks": [(2, 2), (6, 2), (3, 1), (5, 1), (3, 3), (5, 3)]},
+    {"id": "kolonieausdehnung_3", "name": "Kolonieausdehnung III", "kategorie": "Erweiterung",
+     "beschreibung": "Schaltet noch mehr Chunks zum Kauf frei. Die Kolonie expandiert.",
+     "kosten": 200, "zeit": 40, "voraussetzung": "kolonieausdehnung_2", "schaltet_gebaeude_frei": None,
+     "freigebe_chunks": [(2, 1), (6, 1), (2, 3), (6, 3), (3, 0), (4, 0), (5, 0)]},
+    {"id": "kolonieausdehnung_4", "name": "Kolonieausdehnung IV", "kategorie": "Erweiterung",
+     "beschreibung": "Endgame: Schaltet alle verbleibenden Chunks zum Kauf frei.",
+     "kosten": 350, "zeit": 60, "voraussetzung": "kolonieausdehnung_3", "schaltet_gebaeude_frei": None,
+     "freigebe_chunks": [(1, 0), (2, 0), (6, 0), (7, 0), (1, 1), (7, 1),
+                         (1, 2), (7, 2), (1, 3), (7, 3), (1, 4), (2, 4),
+                         (3, 4), (4, 4), (5, 4), (6, 4), (7, 4), (3, 5),
+                         (4, 5), (5, 5)]},
 ]
 
 _fenster = None
@@ -320,6 +340,17 @@ def forschung_tick(ressourcen_dict, aktive_labore=1):
         _erforschte_technologien.add(technologie_id)
         _forschungsauftrag = None
         hud.meldung_anzeigen(f"Forschung abgeschlossen: {technologie['name']}")
+        # Chunk-System: Freigegebene Chunks zum Kauf anbieten
+        freigebe_chunks = technologie.get("freigebe_chunks")
+        if freigebe_chunks:
+            try:
+                import main as _main_modul
+                for cx, cy in freigebe_chunks:
+                    _main_modul.freigeschaltete_chunks.add((cx, cy))
+                hud.meldung_anzeigen(
+                    f"{len(freigebe_chunks)} neue Chunks zum Kauf freigeschaltet!")
+            except Exception:
+                pass
         # Fortgeschrittener Kurs: kleine Hoer-Bestaetigung fuer die Forschung.
         ton.sound_abspielen("forschung_fertig")
         return technologie_id

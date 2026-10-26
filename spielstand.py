@@ -78,6 +78,11 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
         "missionen": missionen.zustand_exportieren(),
         "gegner": gegner.zustand_exportieren(),
         "ereignisse": ereignisse.zustand_exportieren(),
+        "chunks": {
+            "besitzte": [[cx, cy] for cx, cy in __import__("main").besitzte_chunks],
+            "freigeschaltete": [[cx, cy] for cx, cy in __import__("main").freigeschaltete_chunks],
+            "gekauft": __import__("main").chunks_gekauft,
+        },
     }
     try:
         temporaer = DATEI + ".tmp"
@@ -128,6 +133,15 @@ def laden():
         gegner.zustand_importieren(daten.get("gegner", {}))
         # Zufallsereignisse: alte Spielstaende ohne das Feld starten ruhig.
         ereignisse.zustand_importieren(daten.get("ereignisse", {}))
+        # Chunk-Zustand wiederherstellen (alte Spielstaende ohne das Feld starten mit Start-Chunk).
+        chunk_daten = daten.get("chunks", {})
+        try:
+            import main as _main_modul
+            _main_modul.besitzte_chunks = set(tuple(c) for c in chunk_daten.get("besitzte", [[4, 3]]))
+            _main_modul.freigeschaltete_chunks = set(tuple(c) for c in chunk_daten.get("freigeschaltete", []))
+            _main_modul.chunks_gekauft = int(chunk_daten.get("gekauft", 0))
+        except Exception:
+            pass
     except (OSError, json.JSONDecodeError, TypeError, ValueError) as fehler:
         return None, f"Laden fehlgeschlagen: {fehler}"
     return daten, "Spielstand geladen."
