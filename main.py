@@ -220,6 +220,84 @@ def chunk_kaufen(chunk_x, chunk_y, ressourcen_dict):
     return True, f"Chunk ({chunk_x}, {chunk_y}) gekauft!"
 
 
+def chunks_zeichnen(kamera_x, kamera_y):
+    """Zeichnet Chunk-Grenzen und Besitzstatus auf der Karte.
+
+    In der Iso-Ansicht werden rautenfoermige Polygone gezeichnet,
+    in der 2D-Ansicht Rechtecke.
+    """
+    kamera_anzeige_y = kamera_zeichnen_y()
+    for cy in range(WELT_CHUNK_HOEHE):
+        for cx in range(WELT_CHUNK_BREITE):
+            chunk_key = (cx, cy)
+
+            if ISO_ANSICHT:
+                # Raute-Koordinaten fuer den Chunk
+                kx0 = cx * CHUNK_GROESSE
+                ky0 = cy * CHUNK_GROESSE
+                kx1 = (cx + 1) * CHUNK_GROESSE
+                ky1 = (cy + 1) * CHUNK_GROESSE
+                top = iso.raster_zu_welt(kx0, ky0)
+                right = iso.raster_zu_welt(kx1, ky0)
+                bottom = iso.raster_zu_welt(kx1, ky1)
+                left = iso.raster_zu_welt(kx0, ky1)
+                punkte = [
+                    (top[0] - kamera_x, top[1] - kamera_anzeige_y),
+                    (right[0] - kamera_x, right[1] - kamera_anzeige_y),
+                    (bottom[0] - kamera_x, bottom[1] - kamera_anzeige_y),
+                    (left[0] - kamera_x, left[1] - kamera_anzeige_y),
+                ]
+                # Culling
+                xs = [p[0] for p in punkte]
+                ys = [p[1] for p in punkte]
+                if (max(xs) < -50 or min(xs) > BILD_BREITE + 50 or
+                        max(ys) < -50 or min(ys) > BILD_HOEHE + 50):
+                    continue
+
+                if chunk_key in besitzte_chunks:
+                    pygame.draw.polygon(fenster, (60, 80, 60), punkte, 1)
+                elif chunk_key in freigeschaltete_chunks:
+                    kaufbar = any((cx + dx, cy + dy) in besitzte_chunks
+                                  for dx, dy in CHUNK_NACHBARN)
+                    farbe = (80, 200, 80) if kaufbar else (200, 200, 60)
+                    dicke = 3 if kaufbar else 2
+                    pygame.draw.polygon(fenster, farbe, punkte, dicke)
+                else:
+                    # Abdunklung
+                    overlay = pygame.Surface((BILD_BREITE, BILD_HOEHE), pygame.SRCALPHA)
+                    pygame.draw.polygon(overlay, (0, 0, 0, 100), punkte)
+                    fenster.blit(overlay, (0, 0))
+                    pygame.draw.polygon(fenster, (100, 60, 60), punkte, 1)
+            else:
+                # 2D-Ansicht: Rechtecke
+                pixel_x = cx * CHUNK_GROESSE * KACHEL_GROESSE - kamera_x
+                pixel_y = cy * CHUNK_GROESSE * KACHEL_GROESSE - kamera_anzeige_y
+                breite_px = CHUNK_GROESSE * KACHEL_GROESSE
+                hoehe_px = CHUNK_GROESSE * KACHEL_GROESSE
+                if (pixel_x + breite_px < 0 or pixel_x > BILD_BREITE or
+                        pixel_y + hoehe_px < 0 or pixel_y > BILD_HOEHE):
+                    continue
+                if chunk_key in besitzte_chunks:
+                    pygame.draw.rect(fenster, (60, 80, 60),
+                                     (pixel_x, pixel_y, breite_px, hoehe_px), 1)
+                elif chunk_key in freigeschaltete_chunks:
+                    kaufbar = any((cx + dx, cy + dy) in besitzte_chunks
+                                  for dx, dy in CHUNK_NACHBARN)
+                    farbe = (80, 200, 80) if kaufbar else (200, 200, 60)
+                    dicke = 3 if kaufbar else 2
+                    pygame.draw.rect(fenster, farbe,
+                                     (pixel_x, pixel_y, breite_px, hoehe_px), dicke)
+                else:
+                    overlay = pygame.Surface((breite_px, hoehe_px), pygame.SRCALPHA)
+                    overlay.fill((0, 0, 0, 120))
+                    fenster.blit(overlay, (pixel_x, pixel_y))
+                    pygame.draw.rect(fenster, (100, 60, 60),
+                                     (pixel_x, pixel_y, breite_px, hoehe_px), 1)
+
+
+
+
+
 KAMERA_SPEED    = 8          # Kamera-Scrolltempo in Pixeln (Standard bei 60 FPS; im Einstellungsmenü änderbar)
 
 # ── Farben — Weltraum (Hintergrund) ───────────────────────────────────────
@@ -517,6 +595,34 @@ def karte_generieren(planet_id="erde"):
                 if abstand < radius:
                     karten_daten[zeile][spalte] = 3  # 3 = Sand
 
+    # ── Garantie: Start-Chunk enthaelt alle Bodentypen ─────────────────────
+    # Der Spieler muss von Anfang an auf alle Bodentypen zugreifen koennen,
+    # sonst kann er nicht weiterkommen (z.B. Gestein fuer Steinmetz).
+    start_x0 = START_CHUNK_X * CHUNK_GROESSE
+    start_y0 = START_CHUNK_Y * CHUNK_GROESSE
+    start_x1 = start_x0 + CHUNK_GROESSE
+    start_y1 = start_y0 + CHUNK_GROESSE
+    vorhandene_typen = set()
+    for zeile in range(start_y0, start_y1):
+        for spalte in range(start_x0, start_x1):
+            vorhandene_typen.add(karten_daten[zeile][spalte])
+    # Fehlende Bodentypen als kleine Flaeche (3x3) in den Start-Chunk setzen.
+    # Jeder fehlende Typ bekommt eine eigene Position, damit sie sich nicht
+    # gegenseitig ueberschreiben.
+    fehlende_typen = [bt for bt in (0, 1, 2, 3) if bt not in vorhandene_typen]
+    offset = 0
+    for boden_typ in fehlende_typen:
+        # Versetzte Position fuer jeden Typ
+        mitte_x = start_x0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
+        mitte_y = start_y0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                kx = mitte_x + dx
+                ky = mitte_y + dy
+                if (start_x0 <= kx < start_x1 and start_y0 <= ky < start_y1):
+                    karten_daten[ky][kx] = boden_typ
+        offset += 1
+
 
 def _hintergrund_aus_sternen_aufbauen():
     """Baut den statischen Sternen-Layer aus dem aktuellen Sternzustand."""
@@ -667,11 +773,10 @@ def _karte_iso_zeichnen(gitter_an):
     for spalte, zeile in kacheln:
         punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
         _boden_bilder_laden()
-        _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
-        if _boden_bild is not None:
-            bild_skaliert = pygame.transform.scale(
-                _boden_bild, (iso.ISO_KACHEL_BREITE, iso.ISO_KACHEL_HOEHE))
-            fenster.blit(bild_skaliert, (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
+        _boden_bild_iso_erg = _boden_bild_iso(karten_daten[zeile][spalte])
+        if _boden_bild_iso_erg is not None:
+            fenster.blit(_boden_bild_iso_erg,
+                         (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
         else:
             pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
                             punkte)
@@ -1143,6 +1248,34 @@ def karte_generieren(planet_id="erde"):
                 if abstand < radius:
                     karten_daten[zeile][spalte] = 3  # 3 = Sand
 
+    # ── Garantie: Start-Chunk enthaelt alle Bodentypen ─────────────────────
+    # Der Spieler muss von Anfang an auf alle Bodentypen zugreifen koennen,
+    # sonst kann er nicht weiterkommen (z.B. Gestein fuer Steinmetz).
+    start_x0 = START_CHUNK_X * CHUNK_GROESSE
+    start_y0 = START_CHUNK_Y * CHUNK_GROESSE
+    start_x1 = start_x0 + CHUNK_GROESSE
+    start_y1 = start_y0 + CHUNK_GROESSE
+    vorhandene_typen = set()
+    for zeile in range(start_y0, start_y1):
+        for spalte in range(start_x0, start_x1):
+            vorhandene_typen.add(karten_daten[zeile][spalte])
+    # Fehlende Bodentypen als kleine Flaeche (3x3) in den Start-Chunk setzen.
+    # Jeder fehlende Typ bekommt eine eigene Position, damit sie sich nicht
+    # gegenseitig ueberschreiben.
+    fehlende_typen = [bt for bt in (0, 1, 2, 3) if bt not in vorhandene_typen]
+    offset = 0
+    for boden_typ in fehlende_typen:
+        # Versetzte Position fuer jeden Typ
+        mitte_x = start_x0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
+        mitte_y = start_y0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                kx = mitte_x + dx
+                ky = mitte_y + dy
+                if (start_x0 <= kx < start_x1 and start_y0 <= ky < start_y1):
+                    karten_daten[ky][kx] = boden_typ
+        offset += 1
+
 
 def _hintergrund_aus_sternen_aufbauen():
     """Baut den statischen Sternen-Layer aus dem aktuellen Sternzustand."""
@@ -1227,6 +1360,33 @@ def _boden_bilder_laden():
             BODEN_BILDER[typ_index] = bild
     _boden_bilder_geladen = True
 
+# Raute-foermige Bodenbilder fuer die Iso-Ansicht (gecacht)
+_boden_bilder_iso_cache = {}
+
+
+def _boden_bild_iso(typ_index):
+    if typ_index in _boden_bilder_iso_cache:
+        return _boden_bilder_iso_cache[typ_index]
+    bild = BODEN_BILDER.get(typ_index)
+    if bild is None:
+        _boden_bilder_iso_cache[typ_index] = None
+        return None
+    breite = iso.ISO_KACHEL_BREITE
+    hoehe = iso.ISO_KACHEL_HOEHE
+    bild_skaliert = pygame.transform.scale(bild, (breite, hoehe))
+    oberflaeche = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
+    oberflaeche.blit(bild_skaliert, (0, 0))
+    punkte = [(breite // 2, 0), (breite, hoehe // 2),
+              (breite // 2, hoehe), (0, hoehe // 2)]
+    maske = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
+    maske.fill((0, 0, 0, 0))
+    pygame.draw.polygon(maske, (255, 255, 255, 255), punkte)
+    for x in range(breite):
+        for y in range(hoehe):
+            if maske.get_at((x, y))[3] == 0:
+                oberflaeche.set_at((x, y), (0, 0, 0, 0))
+    _boden_bilder_iso_cache[typ_index] = oberflaeche
+    return oberflaeche
 
 
 def _farbe_dunkler(farbe, anteil=0.6):
@@ -1293,11 +1453,10 @@ def _karte_iso_zeichnen(gitter_an):
     for spalte, zeile in kacheln:
         punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
         _boden_bilder_laden()
-        _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
-        if _boden_bild is not None:
-            bild_skaliert = pygame.transform.scale(
-                _boden_bild, (iso.ISO_KACHEL_BREITE, iso.ISO_KACHEL_HOEHE))
-            fenster.blit(bild_skaliert, (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
+        _boden_bild_iso_erg = _boden_bild_iso(karten_daten[zeile][spalte])
+        if _boden_bild_iso_erg is not None:
+            fenster.blit(_boden_bild_iso_erg,
+                         (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
         else:
             pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
                             punkte)
@@ -2949,6 +3108,8 @@ def spielwelt_zeichnen():
         return
 
     karte_zeichnen()
+    # Chunk-Grenzen und Besitzstatus zeichnen
+    chunks_zeichnen(kamera_x, kamera_y)
     # Schritt 5 (Items): Boden-Objekte vor den Gebäuden malen — Gebäude
     # überdecken sie dann korrekt, wenn sie dahinter stehen.
     items.zeichnen(liste_items, kamera_x, kamera_zeichnen_y())
