@@ -267,6 +267,7 @@ oder den Block über ein kleines Python-Skript mit `\\r?\\n`-Mustern ersetzen.
 
 ## 15. Was noch zu tun ist (offene Punkte)
 
+- [x] **Erledigt:** Funktionsname `kachel_in_besetztem_chunk` → `kachel_in_besitztem_chunk` in `main.py` (Zeile 2844), damit Gebäude wieder gebaut werden können.
 - [ ] Items in den Spielstand speichern (`spielstand.speichern` + `kolonien.FELDER`
       um `liste_items` erweitern), damit Abbau-Fortschritt erhalten bleibt.
 - [ ] Items blockieren Bauplätze (Gebäude auf Item-Tiles verhindern oder Item
@@ -277,3 +278,73 @@ oder den Block über ein kleines Python-Skript mit `\\r?\\n`-Mustern ersetzen.
 - [ ] Items als Ressourcenquelle in der Wirtschaft (z. B. Mine auf
       Goldvorkommen bauen, um Gold zu produzieren).
 - [ ] Optional: Schritt 6 (weitere Features laut Schülerwünschen).
+
+---
+
+## 16. QA-Hausaufgabe: „Das Spiel auf Herz und Nieren prüfen“
+
+Für die Schüler liegt eine ausfüllbare Hausaufgabendatei bereit:
+
+**Datei:** `Hausaufgaben/02112026.md`  
+**Abgabe:** Samstag, 07.11.2026
+
+### Was die Schüler tun
+
+1. **Spielen:** `python main.py` starten, mindestens 30 Minuten in einer Spielregel spielen (Standard, Entspannt, Freies Spiel, Überleben).
+2. **Ausprobieren:** Alle Tasten drücken, Fenster verschieben, pausieren, speichern/laden, ohne Geld bauen, Gebäude abreißen.
+3. **Code lesen:** `main.py`, `hud.py`, `gebaeude.py`, `ressourcen.py` durchsehen.
+4. **Funde eintragen:** Direkte Eingabe in die leeren Tabellenfelder der Markdown-Datei.
+
+### Drei Aufgaben (je 100 Punkte, gesamt 300)
+
+| Aufgabe | Thema | Mindestanzahl |
+|---------|-------|---------------|
+| 1 | Fehler-Auflistung | 3 Fehler |
+| 2 | Überflüssigkeiten finden | 3 Überflüssigkeiten |
+| 3 | Verbesserungen & Ideen | 3 Vorschläge |
+
+### Bewertung pro Aufgabe (je 100 Punkte)
+
+- **Genauigkeit** (40): Datei, Taste oder Menü genannt, Fund nachvollziehbar
+- **Beweis** (30): Test, Suche, Screenshot als Beleg
+- **Begründung / Umsetzung** (20): Warum besser, wie umsetzen?
+- **Vielfalt** (10): Verschiedene Dateien/Bereiche, nicht dreimal dasselbe
+
+### Wo tragen die Schüler ein?
+
+Direkt in die leeren Tabellenfelder der Datei `02112026.md`. Jede Aufgabe hat Platz für 3 Pflicht-Einträge plus 2 Bonus-Einträge (Zeilen 4 und 5).
+
+---
+
+## 17. Protokolle (Unterrichtsdokumentation)
+
+Nach jeder Unterrichtsstunde wird ein Protokoll erstellt unter:
+
+```
+Protokolle/Protokoll_YYYY-MM-DD.md
+```
+
+**Beispiel:** `Protokolle/Protokoll_2026-11-03.md`
+
+Inhalt sollte enthalten:
+- Datum und Kurs
+- Zusammenfassung der Stunde
+- Durchgeführte Arbeiten (welche Datei, welche Zeile, was geändert)
+- Fehler und deren Lösung
+- Validierung (`COMPILE_OK`, `CHECK_OK`)
+- Offene Punkte / Nächste Schritte
+- Liste der geänderten Dateien
+
+---
+
+## 18. Cline-Regeln für zukünftige Arbeit am Projekt
+
+Die Datei `.clinerules` im Projektstammordner enthält wichtige Konventionen:
+
+- **Korrekte Pfade:** Immer `Z:/Codes/Unterricht/Schuster/Fortgeschrittener Kurs/Terra_Nova/` verwenden (nicht `Untericht`, `Fortgeschichtener` etc.)
+- **Vor dem Testen kompilieren:** `python -m py_compile <datei>.py` → `COMPILE_OK`
+- **Test-Suite:** `python tests/check.py` → `CHECK_OK`
+- **Keine Kreisimporte:** Kein Modul darf `main.py` importieren
+- **Funktionsnamen konsistent:** z. B. `kachel_in_besitztem_chunk` (mit „z“, nicht „e“)
+- **Temporäre Debug-Dateien löschen:** `_check_*.py`, `_diff_*.py`, `_fix_*.py` etc. nach Gebrauch entfernen
+- **Encoding:** Alle Dateien UTF-8

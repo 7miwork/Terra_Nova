@@ -2841,7 +2841,7 @@ def ereignisse_verarbeiten():
                     gebaeude_auswahl, kachel_x, kachel_y)
                 kacheln_ausserhalb = [
                     (kx, ky) for kx, ky in gebaeude_kacheln
-                    if not chunks.kachel_in_besetztem_chunk(kx, ky)
+                    if not chunks.kachel_in_besitztem_chunk(kx, ky)
                 ]
                 if kacheln_ausserhalb:
                     hud.meldung_anzeigen(

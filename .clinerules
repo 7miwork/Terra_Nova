@@ -1,0 +1,160 @@
+# Cline Rules – Terra_Nova Projekt
+
+Diese Datei enthält Regeln und Konventionen für die Arbeit am Terra_Nova-Projekt, damit zukünftige Sitzungen konsistent und fehlerfrei verlaufen.
+
+---
+
+## 1. Pfade und Verzeichnisse
+
+### Korrekter Projektpfad (immer verwenden):
+```
+Z:/Codes/Unterricht/Schuster/Fortgeschrittener Kurs/Terra_Nova/
+```
+
+### Häufige FALSCHE Schreibweisen (vermeiden!):
+- `Untericht` statt `Unterricht` (fehlendes 'r')
+- `Fortgeschichtener` statt `Fortgeschrittener` (fehlendes 't')
+- `Fortgeschrichtener` statt `Fortgeschrittener`
+
+**Tipp:** Immer den Pfad aus dem echten Dateisystem kopieren, nicht aus dem Gedächtnis tippen.
+
+---
+
+## 2. Python-Dateien kompilieren vor dem Testen
+
+Nach jeder Änderung an einer `.py`-Datei:
+
+```bash
+python -m py_compile <datei>.py && echo 'COMPILE_OK'
+```
+
+Erst wenn `COMPILE_OK` erscheint, darf das Spiel gestartet oder `tests/check.py` ausgeführt werden.
+
+---
+
+## 3. Test-Suite ausführen
+
+Nach erfolgreichem Kompilieren:
+
+```bash
+python tests/check.py 2>&1 | Select-Object -Last 3
+```
+
+Erwartete Ausgabe: `CHECK_OK`
+
+---
+
+## 4. Import-Regeln (Kreisimporte vermeiden)
+
+- `main.py` importiert andere Module (`chunks`, `gebaeude`, `hud`, `ressourcen`, `forschung`, `spielstand` etc.)
+- Kein anderes Modul darf `main.py` importieren (außer unter `if __name__ == "__main__":`)
+- `chunks.py`, `forschung.py`, `spielstand.py` sollen untereinander nicht zirkulär importieren
+
+---
+
+## 5. Funktionsnamen konsistent halten
+
+Wenn eine Funktion in einem Modul definiert ist (z. B. `chunks.kachel_in_besitztem_chunk`), muss der Aufruf in anderen Dateien exakt denselben Namen verwenden (Groß-/Kleinschreibung, Umlaute, 'z' vs 'e' etc.).
+
+**Beispiel für einen Fehler, der schon auftrat:**
+- Falsch: `chunks.kachel_in_besetztem_chunk` (mit 'e')
+- Richtig: `chunks.kachel_in_besitztem_chunk` (mit 'z')
+
+---
+
+## 6. Doppelter Code vermeiden
+
+Bevor eine neue Funktion geschrieben wird, prüfen ob sie bereits existiert:
+- `karte_generieren()` darf nur einmal definiert sein
+- `karte_zeichnen()` darf nur einmal definiert sein
+- Hilfsfunktionen nicht duplizieren
+
+---
+
+## 7. Protokolle führen
+
+Nach jeder Unterrichtsstunde eine Protokolldatei erstellen unter:
+
+```
+Z:/Codes/Unterricht/Schuster/Fortgeschrittener Kurs/Terra_Nova/Protokolle/Protokoll_YYYY-MM-DD.md
+```
+
+Inhalt sollte enthalten:
+- Datum und Kurs
+- Zusammenfassung der Stunde
+- Durchgeführte Arbeiten (was wurde geändert, in welcher Datei, welche Zeile)
+- Fehler und deren Lösung
+- Validierung (COMPILE_OK, CHECK_OK)
+- Offene Punkte / Nächste Schritte
+- Liste der geänderten Dateien
+
+---
+
+## 8. Temporäre Dateien aufräumen
+
+Hilfsskripte zum Debuggen (z. B. `_check_*.py`, `_diff_*.py`, `_fix_*.py`, `_patch_*.py`, `_build_*.py`) nach Gebrauch löschen. Sie dürfen nicht im Projektverbleib bleiben.
+
+---
+
+## 9. Hausaufgaben-Dateien
+
+Hausaufgaben liegen unter:
+```
+Z:/Codes/Unterricht/Schuster/Fortgeschrittener Kurs/Terra_Nova/Hausaufgaben/
+```
+
+Format: Markdown (`.md`) mit ausfüllbaren Tabellen für Schüler.
+
+Wichtige Felder im Kopf:
+- Abgabedatum (immer aktuell halten)
+- Name (Ausfüllfeld)
+- Gespielte Spielregel
+- Spielzeit
+
+Punktesystem: Gesamt 300 Punkte, je Aufgabe 100 Punkte.
+
+---
+
+## 10. Encoding
+
+Alle Text- und Python-Dateien immer mit **UTF-8** speichern.
+
+---
+
+## 11. Handbuch Mike.md aktuell halten
+
+Nach jeder wesentlichen Änderung am Projekt muss das Handbuch aktualisiert werden:
+
+**Datei:** `Z:/Codes/Unterricht/Schuster/Fortgeschrittener Kurs/Terra_Nova/Dokumentation/Handbuch Mike.md`
+
+**Wann aktualisieren:**
+- Neue Funktion hinzugefügt oder geändert
+- Fehler behoben (z. B. Funktionsnamen korrigiert)
+- Neue Dateien erstellt oder gelöscht
+- Ordnerstruktur geändert (z. B. `Protokolle/` hinzugefügt)
+- Hausaufgaben oder Punktesystem geändert
+
+**Was eintragen:**
+- Erledigte Punkte als `[x]` markieren
+- Neue Abschnitte für QA-Hausaufgabe, Protokolle, Cline-Regeln etc.
+- Offene Punkte in der To-Do-Liste (Abschnitt 15) aktualisieren
+
+**Nur `Handbuch Mike.md` bearbeiten — andere Dokumentationsdateien nicht anfassen.**
+
+---
+
+## 12. Befehle für PowerShell (Windows)
+
+PowerShell hat Probleme mit:
+- Heredocs (`<< 'EOF'`) → nicht verwenden
+- `head` Kommando → nicht verfügbar, stattdessen `Select-Object -First N` oder `Select-Object -Last N`
+- Pfade mit Leerzeichen immer in Anführungszeichen setzen
+
+Empfohlene Befehlsstruktur:
+```bash
+python3 -c "..."
+python -m py_compile "pfad/datei.py"
+python tests/check.py
+```
+
+---
