@@ -344,9 +344,9 @@ def forschung_tick(ressourcen_dict, aktive_labore=1):
         freigebe_chunks = technologie.get("freigebe_chunks")
         if freigebe_chunks:
             try:
-                import main as _main_modul
+                import chunks
                 for cx, cy in freigebe_chunks:
-                    _main_modul.freigeschaltete_chunks.add((cx, cy))
+                    chunks.freigeschaltete_chunks.add((cx, cy))
                 hud.meldung_anzeigen(
                     f"{len(freigebe_chunks)} neue Chunks zum Kauf freigeschaltet!")
             except Exception:

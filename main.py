@@ -69,6 +69,7 @@ Heute in Stunde 9 lernen wir NEU dazu (die Verbesserungsvorschläge der Schüler
 """
 
 import os
+import chunks   # Chunk-Zustand gemeinsam mit forschung.py und spielstand.py nutzen
 import pygame
 import sys
 import random       # Für zufällige Planeten-Generation
@@ -135,89 +136,11 @@ BAU_FELD_ENDE_X  = BAU_FELD_START_X + BAU_BREITE     # = 130
 BAU_FELD_ENDE_Y  = BAU_FELD_START_Y + BAU_HOEHE      # = 95
 
 # ══════════════════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════════════
 # CHUNK-SYSTEM FÜR ENDLOSE WELT
-# Die Welt wird in Chunks unterteilt. Jeder Chunk muss einzeln gekauft werden,
-# bevor darauf gebaut werden darf. Der mittlere Chunk ist kostenlos.
-# Forschung schaltet neue Chunks zum Kauf frei. Kosten steigen mit jedem Kauf.
+# Alle Chunk-Variablen und -Funktionen liegen jetzt im Modul chunks.py (siehe dort).
+# main.py nutzt chunks.besitzte_chunks, chunks.chunk_kaufen() usw.
 # ══════════════════════════════════════════════════════════════════════════════════════
-CHUNK_GROESSE = 25                      # Kacheln pro Chunk (Quadratisch)
-WELT_CHUNK_BREITE = WELT_BREITE // CHUNK_GROESSE   # 8
-WELT_CHUNK_HOEHE = WELT_HOEHE // CHUNK_GROESSE    # 6
-CHUNK_BASISKOSTEN = {"gold": 150, "stein": 60, "holz": 40}  # Kosten für 1. Chunk
-CHUNK_KOSTEN_MULTIPLIKATOR = 1.6          # Jeder weitere Chunk ist teurer
-CHUNK_NACHBARN = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
-
-# Zustand — Chunk-Besitz
-besitzte_chunks = set()       # Gekaufte Chunks: {(chunk_x, chunk_y), ...}
-freigeschaltete_chunks = set()  # Durch Forschung zum Kauf freigegebene Chunks
-chunks_gekauft = 0            # Anzahl gekaufter Chunks (für Kostensteigerung)
-
-# Start-Chunk (mitte der Welt) gehört automatisch zum Besitz
-START_CHUNK_X = WELT_CHUNK_BREITE // 2   # 4
-START_CHUNK_Y = WELT_CHUNK_HOEHE // 2    # 3
-besitzte_chunks.add((START_CHUNK_X, START_CHUNK_Y))
-
-
-def chunk_fuer_kachel(kachel_x, kachel_y):
-    """Berechnet den Chunk für eine Kachelkoordinate."""
-    return kachel_x // CHUNK_GROESSE, kachel_y // CHUNK_GROESSE
-
-
-def kachel_in_besitztem_chunk(kachel_x, kachel_y):
-    """Prüft, ob die Kachel in einem bereits besitzten Chunk liegt."""
-    cx, cy = chunk_fuer_kachel(kachel_x, kachel_y)
-    return (cx, cy) in besitzte_chunks
-
-
-def chunk_kann_gekauft_werden(chunk_x, chunk_y):
-    """Prüft, ob ein Chunk gekauft werden kann.
-
-    Bedingungen:
-    1. Noch nicht im Besitz
-    2. Durch Forschung freigeschaltet
-    3. Benachbart zu einem bereits besitzten Chunk (8-Nachbarschaft)
-    """
-    if (chunk_x, chunk_y) in besitzte_chunks:
-        return False, "Dieser Chunk gehört bereits dir."
-    if (chunk_x, chunk_y) not in freigeschaltete_chunks:
-        return False, "Dieser Chunk ist noch nicht freigeschaltet."
-    for dx, dy in CHUNK_NACHBARN:
-        if (chunk_x + dx, chunk_y + dy) in besitzte_chunks:
-            return True, ""
-    return False, "Dieser Chunk liegt nicht neben deinem Gebiet."
-
-
-def chunk_kosten_berechnen(chunks_gekauft_anzahl):
-    """Berechnet die Kosten für den nächsten Chunk-Kauf.
-
-    Jeder weitere Chunk ist teurer (Multiplikator potenziert mit Kaufanzahl).
-    """
-    faktor = CHUNK_KOSTEN_MULTIPLIKATOR ** chunks_gekauft_anzahl
-    kosten = {}
-    for name, basis in CHUNK_BASISKOSTEN.items():
-        kosten[name] = max(1, int(basis * faktor))
-    return kosten
-
-
-def chunk_kaufen(chunk_x, chunk_y, ressourcen_dict):
-    """Kauft einen Chunk, wenn möglich.
-
-    Gibt (erfolg, meldung) zurück.
-    """
-    global chunks_gekauft
-    kann, grund = chunk_kann_gekauft_werden(chunk_x, chunk_y)
-    if not kann:
-        return False, grund
-    kosten = chunk_kosten_berechnen(chunks_gekauft)
-    fehlende = [f"{name}: {menge}" for name, menge in kosten.items()
-                if ressourcen_dict.get(name, 0) < menge]
-    if fehlende:
-        return False, "Rohstoffe fehlen: " + ", ".join(fehlende)
-    for name, menge in kosten.items():
-        ressourcen_dict[name] -= menge
-    besitzte_chunks.add((chunk_x, chunk_y))
-    chunks_gekauft += 1
-    return True, f"Chunk ({chunk_x}, {chunk_y}) gekauft!"
 
 
 def chunks_zeichnen(kamera_x, kamera_y):
@@ -227,16 +150,16 @@ def chunks_zeichnen(kamera_x, kamera_y):
     in der 2D-Ansicht Rechtecke.
     """
     kamera_anzeige_y = kamera_zeichnen_y()
-    for cy in range(WELT_CHUNK_HOEHE):
-        for cx in range(WELT_CHUNK_BREITE):
+    for cy in range(chunks.WELT_CHUNK_HOEHE):
+        for cx in range(chunks.WELT_CHUNK_BREITE):
             chunk_key = (cx, cy)
 
             if ISO_ANSICHT:
                 # Raute-Koordinaten fuer den Chunk
-                kx0 = cx * CHUNK_GROESSE
-                ky0 = cy * CHUNK_GROESSE
-                kx1 = (cx + 1) * CHUNK_GROESSE
-                ky1 = (cy + 1) * CHUNK_GROESSE
+                kx0 = cx * chunks.CHUNK_GROESSE
+                ky0 = cy * chunks.CHUNK_GROESSE
+                kx1 = (cx + 1) * chunks.CHUNK_GROESSE
+                ky1 = (cy + 1) * chunks.CHUNK_GROESSE
                 top = iso.raster_zu_welt(kx0, ky0)
                 right = iso.raster_zu_welt(kx1, ky0)
                 bottom = iso.raster_zu_welt(kx1, ky1)
@@ -254,11 +177,11 @@ def chunks_zeichnen(kamera_x, kamera_y):
                         max(ys) < -50 or min(ys) > BILD_HOEHE + 50):
                     continue
 
-                if chunk_key in besitzte_chunks:
+                if chunk_key in chunks.besitzte_chunks:
                     pygame.draw.polygon(fenster, (60, 80, 60), punkte, 1)
-                elif chunk_key in freigeschaltete_chunks:
-                    kaufbar = any((cx + dx, cy + dy) in besitzte_chunks
-                                  for dx, dy in CHUNK_NACHBARN)
+                elif chunk_key in chunks.freigeschaltete_chunks:
+                    kaufbar = any((cx + dx, cy + dy) in chunks.besitzte_chunks
+                                  for dx, dy in chunks.CHUNK_NACHBARN)
                     farbe = (80, 200, 80) if kaufbar else (200, 200, 60)
                     dicke = 3 if kaufbar else 2
                     pygame.draw.polygon(fenster, farbe, punkte, dicke)
@@ -270,19 +193,19 @@ def chunks_zeichnen(kamera_x, kamera_y):
                     pygame.draw.polygon(fenster, (100, 60, 60), punkte, 1)
             else:
                 # 2D-Ansicht: Rechtecke
-                pixel_x = cx * CHUNK_GROESSE * KACHEL_GROESSE - kamera_x
-                pixel_y = cy * CHUNK_GROESSE * KACHEL_GROESSE - kamera_anzeige_y
-                breite_px = CHUNK_GROESSE * KACHEL_GROESSE
-                hoehe_px = CHUNK_GROESSE * KACHEL_GROESSE
+                pixel_x = cx * chunks.CHUNK_GROESSE * KACHEL_GROESSE - kamera_x
+                pixel_y = cy * chunks.CHUNK_GROESSE * KACHEL_GROESSE - kamera_anzeige_y
+                breite_px = chunks.CHUNK_GROESSE * KACHEL_GROESSE
+                hoehe_px = chunks.CHUNK_GROESSE * KACHEL_GROESSE
                 if (pixel_x + breite_px < 0 or pixel_x > BILD_BREITE or
                         pixel_y + hoehe_px < 0 or pixel_y > BILD_HOEHE):
                     continue
-                if chunk_key in besitzte_chunks:
+                if chunk_key in chunks.besitzte_chunks:
                     pygame.draw.rect(fenster, (60, 80, 60),
                                      (pixel_x, pixel_y, breite_px, hoehe_px), 1)
-                elif chunk_key in freigeschaltete_chunks:
-                    kaufbar = any((cx + dx, cy + dy) in besitzte_chunks
-                                  for dx, dy in CHUNK_NACHBARN)
+                elif chunk_key in chunks.freigeschaltete_chunks:
+                    kaufbar = any((cx + dx, cy + dy) in chunks.besitzte_chunks
+                                  for dx, dy in chunks.CHUNK_NACHBARN)
                     farbe = (80, 200, 80) if kaufbar else (200, 200, 60)
                     dicke = 3 if kaufbar else 2
                     pygame.draw.rect(fenster, farbe,
@@ -558,50 +481,51 @@ def karte_generieren(planet_id="erde"):
         for spalte in range(WELT_BREITE):
             neue_zeile.append(0)  # 0 = Erde (Standard)
         karten_daten.append(neue_zeile)
-    
-    # ── Schritt 1: Große Gras-Flächen erzeugen ────────────────────────────
-    anzahl_gras_flaechen = parameter["gras_flaechen"]
-    for _ in range(anzahl_gras_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(4, 10)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 1  # 1 = Gras
-    
-    # ── Schritt 2: Gesteins-Flächen erzeugen ──────────────────────────────
-    anzahl_gestein_flaechen = parameter["gestein_flaechen"]
-    for _ in range(anzahl_gestein_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(3, 7)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 2  # 2 = Gestein
-    
-    # ── Schritt 3: Sand-Flächen erzeugen ──────────────────────────────────
+    # ── Schritt 1: Sand-Flächen erzeugen (zuerst, damit Gras und Gestein
+    #     darueber gelegt werden koennen) ─────────────────────────────────
     anzahl_sand_flaechen = parameter["sand_flaechen"]
     for _ in range(anzahl_sand_flaechen):
         mitte_x = random.randint(5, WELT_BREITE - 5)
         mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(3, 8)
+        radius = random.randint(8, 13)
         for zeile in range(WELT_HOEHE):
             for spalte in range(WELT_BREITE):
                 abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
                 if abstand < radius:
                     karten_daten[zeile][spalte] = 3  # 3 = Sand
 
+    # ── Schritt 2: Gesteins-Flächen erzeugen ──────────────────────────────
+    anzahl_gestein_flaechen = parameter["gestein_flaechen"]
+    for _ in range(anzahl_gestein_flaechen):
+        mitte_x = random.randint(5, WELT_BREITE - 5)
+        mitte_y = random.randint(5, WELT_HOEHE - 5)
+        radius = random.randint(7, 11)
+        for zeile in range(WELT_HOEHE):
+            for spalte in range(WELT_BREITE):
+                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
+                if abstand < radius:
+                    karten_daten[zeile][spalte] = 2  # 2 = Gestein
+
+    # ── Schritt 3: Große Gras-Flächen erzeugen (zuletzt, damit sie
+    #     die anderen Flächen ueberlagern) ──────────────────────────────
+    anzahl_gras_flaechen = parameter["gras_flaechen"]
+    for _ in range(anzahl_gras_flaechen):
+        mitte_x = random.randint(5, WELT_BREITE - 5)
+        mitte_y = random.randint(5, WELT_HOEHE - 5)
+        radius = random.randint(6, 12)
+        for zeile in range(WELT_HOEHE):
+            for spalte in range(WELT_BREITE):
+                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
+                if abstand < radius:
+                    karten_daten[zeile][spalte] = 1  # 1 = Gras
+
     # ── Garantie: Start-Chunk enthaelt alle Bodentypen ─────────────────────
     # Der Spieler muss von Anfang an auf alle Bodentypen zugreifen koennen,
     # sonst kann er nicht weiterkommen (z.B. Gestein fuer Steinmetz).
-    start_x0 = START_CHUNK_X * CHUNK_GROESSE
-    start_y0 = START_CHUNK_Y * CHUNK_GROESSE
-    start_x1 = start_x0 + CHUNK_GROESSE
-    start_y1 = start_y0 + CHUNK_GROESSE
+    start_x0 = chunks.START_CHUNK_X * chunks.CHUNK_GROESSE
+    start_y0 = chunks.START_CHUNK_Y * chunks.CHUNK_GROESSE
+    start_x1 = start_x0 + chunks.CHUNK_GROESSE
+    start_y1 = start_y0 + chunks.CHUNK_GROESSE
     vorhandene_typen = set()
     for zeile in range(start_y0, start_y1):
         for spalte in range(start_x0, start_x1):
@@ -613,8 +537,8 @@ def karte_generieren(planet_id="erde"):
     offset = 0
     for boden_typ in fehlende_typen:
         # Versetzte Position fuer jeden Typ
-        mitte_x = start_x0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
-        mitte_y = start_y0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
+        mitte_x = start_x0 + chunks.CHUNK_GROESSE // 4 + offset * (chunks.CHUNK_GROESSE // 3)
+        mitte_y = start_y0 + chunks.CHUNK_GROESSE // 4 + offset * (chunks.CHUNK_GROESSE // 3)
         for dy in range(-1, 2):
             for dx in range(-1, 2):
                 kx = mitte_x + dx
@@ -1211,50 +1135,51 @@ def karte_generieren(planet_id="erde"):
         for spalte in range(WELT_BREITE):
             neue_zeile.append(0)  # 0 = Erde (Standard)
         karten_daten.append(neue_zeile)
-    
-    # ── Schritt 1: Große Gras-Flächen erzeugen ────────────────────────────
-    anzahl_gras_flaechen = parameter["gras_flaechen"]
-    for _ in range(anzahl_gras_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(4, 10)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 1  # 1 = Gras
-    
-    # ── Schritt 2: Gesteins-Flächen erzeugen ──────────────────────────────
-    anzahl_gestein_flaechen = parameter["gestein_flaechen"]
-    for _ in range(anzahl_gestein_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(3, 7)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 2  # 2 = Gestein
-    
-    # ── Schritt 3: Sand-Flächen erzeugen ──────────────────────────────────
+    # ── Schritt 1: Sand-Flächen erzeugen (zuerst, damit Gras und Gestein
+    #     darueber gelegt werden koennen) ─────────────────────────────────
     anzahl_sand_flaechen = parameter["sand_flaechen"]
     for _ in range(anzahl_sand_flaechen):
         mitte_x = random.randint(5, WELT_BREITE - 5)
         mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(3, 8)
+        radius = random.randint(8, 13)
         for zeile in range(WELT_HOEHE):
             for spalte in range(WELT_BREITE):
                 abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
                 if abstand < radius:
                     karten_daten[zeile][spalte] = 3  # 3 = Sand
 
+    # ── Schritt 2: Gesteins-Flächen erzeugen ──────────────────────────────
+    anzahl_gestein_flaechen = parameter["gestein_flaechen"]
+    for _ in range(anzahl_gestein_flaechen):
+        mitte_x = random.randint(5, WELT_BREITE - 5)
+        mitte_y = random.randint(5, WELT_HOEHE - 5)
+        radius = random.randint(7, 11)
+        for zeile in range(WELT_HOEHE):
+            for spalte in range(WELT_BREITE):
+                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
+                if abstand < radius:
+                    karten_daten[zeile][spalte] = 2  # 2 = Gestein
+
+    # ── Schritt 3: Große Gras-Flächen erzeugen (zuletzt, damit sie
+    #     die anderen Flächen ueberlagern) ──────────────────────────────
+    anzahl_gras_flaechen = parameter["gras_flaechen"]
+    for _ in range(anzahl_gras_flaechen):
+        mitte_x = random.randint(5, WELT_BREITE - 5)
+        mitte_y = random.randint(5, WELT_HOEHE - 5)
+        radius = random.randint(6, 12)
+        for zeile in range(WELT_HOEHE):
+            for spalte in range(WELT_BREITE):
+                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
+                if abstand < radius:
+                    karten_daten[zeile][spalte] = 1  # 1 = Gras
+
     # ── Garantie: Start-Chunk enthaelt alle Bodentypen ─────────────────────
     # Der Spieler muss von Anfang an auf alle Bodentypen zugreifen koennen,
     # sonst kann er nicht weiterkommen (z.B. Gestein fuer Steinmetz).
-    start_x0 = START_CHUNK_X * CHUNK_GROESSE
-    start_y0 = START_CHUNK_Y * CHUNK_GROESSE
-    start_x1 = start_x0 + CHUNK_GROESSE
-    start_y1 = start_y0 + CHUNK_GROESSE
+    start_x0 = chunks.START_CHUNK_X * chunks.CHUNK_GROESSE
+    start_y0 = chunks.START_CHUNK_Y * chunks.CHUNK_GROESSE
+    start_x1 = start_x0 + chunks.CHUNK_GROESSE
+    start_y1 = start_y0 + chunks.CHUNK_GROESSE
     vorhandene_typen = set()
     for zeile in range(start_y0, start_y1):
         for spalte in range(start_x0, start_x1):
@@ -1266,8 +1191,8 @@ def karte_generieren(planet_id="erde"):
     offset = 0
     for boden_typ in fehlende_typen:
         # Versetzte Position fuer jeden Typ
-        mitte_x = start_x0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
-        mitte_y = start_y0 + CHUNK_GROESSE // 4 + offset * (CHUNK_GROESSE // 3)
+        mitte_x = start_x0 + chunks.CHUNK_GROESSE // 4 + offset * (chunks.CHUNK_GROESSE // 3)
+        mitte_y = start_y0 + chunks.CHUNK_GROESSE // 4 + offset * (chunks.CHUNK_GROESSE // 3)
         for dy in range(-1, 2):
             for dx in range(-1, 2):
                 kx = mitte_x + dx
@@ -1963,7 +1888,8 @@ def spielstand_speichern():
         _auswahl_kategorie, _auswahl_position, gebaeude_auswahl,
         _letztes_gebaeude, spiel_status,
         {"nahrung": _null_nahrung_ticks, "energie": _null_energie_ticks},
-        _regel_auswahl, kolonien_daten=kolonien.zustand_fuer_spielstand())
+        _regel_auswahl, kolonien_daten=kolonien.zustand_fuer_spielstand(),
+        liste_items=liste_items)
     print(meldung)
     hud.meldung_anzeigen(meldung)
     return erfolg
@@ -1971,7 +1897,7 @@ def spielstand_speichern():
 
 def spielstand_laden():
     """Lädt eine Welt, validiert Grunddaten und startet sie im Spielmodus."""
-    global karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude
+    global karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude, liste_items
     global kamera_x, kamera_y, tick_zaehler, spiel_geschwindigkeit
     global gebaeude_auswahl, _auswahl_kategorie, _auswahl_position
     global _letztes_gebaeude, _hilfe_offen, _terraform_modus
@@ -1979,7 +1905,6 @@ def spielstand_laden():
     global spiel_status, spiel_ende_titel, spiel_ende_grund
     global _null_nahrung_ticks, _null_energie_ticks, _regel_auswahl
     global _hintergrund_surface
-    global besitzte_chunks, freigeschaltete_chunks, chunks_gekauft
 
     daten, meldung = spielstand.laden()
     if daten is None:
@@ -2015,9 +1940,11 @@ def spielstand_laden():
     ressourcen_dict.setdefault("raumschiffe", 0)
     ressourcen.zufriedenheit_begrenzen(ressourcen_dict)
     liste_gebaeude = gebaeude_liste
-    # Schritt 5 (Items): Geladene Karte mit passiven Gegenständen bestücken.
-    # (Der Spielstand speichert Items noch nicht — sie werden neu verteilt.)
-    items_generieren()
+    # Schritt 5 (Items): Gespeicherte Items laden oder neu verteilen.
+    if "items" in daten:
+        liste_items = list(daten["items"])
+    else:
+        items_generieren()
     kamera = daten.get("kamera", {})
     kamera_x = int(kamera.get("x", 0))
     kamera_y = int(kamera.get("y", 0))
@@ -2873,10 +2800,10 @@ def ereignisse_verarbeiten():
 
                 # -- Chunk-Kauf: Wenn Kachel ausserhalb des eigenen Gebiets liegt --
                 # wird versucht, den zugehoerigen Chunk zu kaufen, statt zu bauen.
-                if not kachel_in_besitztem_chunk(kachel_x, kachel_y):
-                    cx, cy = chunk_fuer_kachel(kachel_x, kachel_y)
-                    if 0 <= cx < WELT_CHUNK_BREITE and 0 <= cy < WELT_CHUNK_HOEHE:
-                        erfolg, meldung = chunk_kaufen(cx, cy, ressourcen_dict)
+                if not chunks.kachel_in_besitztem_chunk(kachel_x, kachel_y):
+                    cx, cy = chunks.chunk_fuer_kachel(kachel_x, kachel_y)
+                    if 0 <= cx < chunks.WELT_CHUNK_BREITE and 0 <= cy < chunks.WELT_CHUNK_HOEHE:
+                        erfolg, meldung = chunks.chunk_kaufen(cx, cy, ressourcen_dict)
                         hud.meldung_anzeigen(meldung)
                         if erfolg:
                             ton.sound_abspielen("bauen")
@@ -2889,7 +2816,7 @@ def ereignisse_verarbeiten():
                 
                 # ── STUNDE 8: Boden-Typ der Kachel prüfen ──────────────────
                 # Hole den Bodentyp der angeklickten Kachel
-                if kachel_in_besitztem_chunk(kachel_x, kachel_y):
+                if chunks.kachel_in_besitztem_chunk(kachel_x, kachel_y):
                     boden_typ = karten_daten[kachel_y][kachel_x]
                 else:
                     boden_typ = None  # Außerhalb des eigenen Gebiets
@@ -2907,6 +2834,21 @@ def ereignisse_verarbeiten():
                         missionen_pruefen()
                     continue
 
+                # ── SCHRITT 2: Alle Kacheln der Gebäudefläche müssen in
+                #     gekauften Chunks liegen ──
+                gebaeude_name = gebaeude.GEBAEUDE_TYPEN[gebaeude_auswahl]["name"]
+                gebaeude_kacheln = gebaeude.gebaeude_flaeche(
+                    gebaeude_auswahl, kachel_x, kachel_y)
+                kacheln_ausserhalb = [
+                    (kx, ky) for kx, ky in gebaeude_kacheln
+                    if not chunks.kachel_in_besetztem_chunk(kx, ky)
+                ]
+                if kacheln_ausserhalb:
+                    hud.meldung_anzeigen(
+                        f"{gebaeude_name}: Einige Kacheln liegen außerhalb deines Gebiets.")
+                    ton.sound_abspielen("fehler")
+                    continue
+
                 # ── Bauprüfung mit verständlicher Rückmeldung ──────────────
                 # Wir prüfen bewusst in einer festen Reihenfolge:
                 # 1. Fehlt Forschung oder eine andere Freischaltung?
@@ -2914,7 +2856,6 @@ def ereignisse_verarbeiten():
                 # 3. Fehlen echte Baurohstoffe?
                 # So bekommt die Spielperson nicht fälschlich die Meldung
                 # „Rohstoffe fehlen“, wenn eigentlich Forschung fehlt.
-                gebaeude_name = gebaeude.GEBAEUDE_TYPEN[gebaeude_auswahl]["name"]
                 freischaltung = ressourcen.freischaltung_hinweis(
                     ressourcen_dict, gebaeude_auswahl)
                 bauplatz_frei = gebaeude.kann_platzieren(
@@ -2973,10 +2914,10 @@ def ereignisse_verarbeiten():
 
                 # -- Chunk-Kauf: Wenn Kachel ausserhalb des eigenen Gebiets liegt --
                 # wird versucht, den zugehoerigen Chunk zu kaufen, statt zu bauen.
-                if not kachel_in_besitztem_chunk(kachel_x, kachel_y):
-                    cx, cy = chunk_fuer_kachel(kachel_x, kachel_y)
-                    if 0 <= cx < WELT_CHUNK_BREITE and 0 <= cy < WELT_CHUNK_HOEHE:
-                        erfolg, meldung = chunk_kaufen(cx, cy, ressourcen_dict)
+                if not chunks.kachel_in_besitztem_chunk(kachel_x, kachel_y):
+                    cx, cy = chunks.chunk_fuer_kachel(kachel_x, kachel_y)
+                    if 0 <= cx < chunks.WELT_CHUNK_BREITE and 0 <= cy < chunks.WELT_CHUNK_HOEHE:
+                        erfolg, meldung = chunks.chunk_kaufen(cx, cy, ressourcen_dict)
                         hud.meldung_anzeigen(meldung)
                         if erfolg:
                             ton.sound_abspielen("bauen")

@@ -24,9 +24,9 @@ Karten-Parameter steuern main.karte_generieren().
 # Die Werte sind die Originalwerte der ersten Version - kein Planet
 # veraendert also ohne eigenen Eintrag das alte Kartenbild.
 KARTEN_STANDARD = {
-    "gras_flaechen": 8,      # fruchtbar - gut fuer Farmen
-    "gestein_flaechen": 5,   # Felsen - viel Stein, Mining
-    "sand_flaechen": 6,      # Wueste - wenig guter Boden
+    "gras_flaechen": 40,      # fruchtbar - gut fuer Farmen
+    "gestein_flaechen": 30,   # Felsen - viel Stein, Mining
+    "sand_flaechen": 30,      # Wueste - wenig guter Boden
 }
 
 # Kosten jeder Koloniegruendung. Phase 2 darf das pro Planet
@@ -67,7 +67,7 @@ PLANETEN = [
         "rohstoffe": {"forschung": 1.5, "holz": 0.6, "stein": 0.7},
         "start": {"gold": 80, "energie": 40, "holz": 20,
                   "stein": 15, "nahrung": 40},
-        "karte": {"gras_flaechen": 4, "gestein_flaechen": 9, "sand_flaechen": 3},
+        "karte": {"gras_flaechen": 16, "gestein_flaechen": 36, "sand_flaechen": 12},
         "gefahr": 0,
         "farbe": (205, 205, 210),
     },
@@ -81,7 +81,7 @@ PLANETEN = [
         "rohstoffe": {"eisen": 2.5, "kohle": 1.5, "energie": 0.85},
         "start": {"gold": 90, "energie": 30, "holz": 20,
                   "stein": 25, "nahrung": 40},
-        "karte": {"gras_flaechen": 3, "gestein_flaechen": 10, "sand_flaechen": 8},
+        "karte": {"gras_flaechen": 12, "gestein_flaechen": 40, "sand_flaechen": 32},
         "gefahr": 1,
         "farbe": (215, 120, 80),
     },
@@ -93,7 +93,7 @@ PLANETEN = [
         "freigeschaltet": False,      # Phase 2: Biomasse und Leben
         "rohstoffe": {"nahrung": 1.4, "forschung": 1.2},
         "start": {"nahrung": 70},
-        "karte": {"gras_flaechen": 12, "gestein_flaechen": 4, "sand_flaechen": 4},
+        "karte": {"gras_flaechen": 48, "gestein_flaechen": 16, "sand_flaechen": 16},
         "gefahr": 1,
         "farbe": (175, 105, 220),
     },
@@ -105,7 +105,7 @@ PLANETEN = [
         "freigeschaltet": False,      # Phase 2: Gefahr- und Hitze-Rechnung
         "rohstoffe": {"energie": 1.6, "stein": 1.2},
         "start": {"energie": 90, "gold": 90},
-        "karte": {"gras_flaechen": 2, "gestein_flaechen": 10, "sand_flaechen": 6},
+        "karte": {"gras_flaechen": 8, "gestein_flaechen": 40, "sand_flaechen": 24},
         "gefahr": 2,
         "farbe": (240, 95, 70),
     },
@@ -117,7 +117,7 @@ PLANETEN = [
         "freigeschaltet": False,      # Phase 2: Wasser und Energie-Rechnung
         "rohstoffe": {"nahrung": 1.3, "energie": 1.1},
         "start": {"nahrung": 90, "energie": 50},
-        "karte": {"gras_flaechen": 6, "gestein_flaechen": 6, "sand_flaechen": 6},
+        "karte": {"gras_flaechen": 24, "gestein_flaechen": 24, "sand_flaechen": 24},
         "gefahr": 1,
         "farbe": (140, 210, 245),
     },

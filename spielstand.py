@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 
+import chunks
 import forschung
 import handel
 import ressourcen
@@ -43,7 +44,7 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
               kamera_x, kamera_y, tick_zaehler, spiel_geschwindigkeit,
               auswahl_kategorie, auswahl_position, gebaeude_auswahl,
               letztes_gebaeude, spielstatus="spiel", versorgungszaehler=None,
-              regel_auswahl="standard", kolonien_daten=None):
+              regel_auswahl="standard", kolonien_daten=None, liste_items=None):
     """Speichert den übergebenen Weltzustand und liefert Erfolg plus Text."""
     daten = {
         "version": VERSION,
@@ -52,6 +53,7 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
         "sterne_liste": _kopie_wert(sterne_liste),
         "ressourcen": _kopie_wert(ressourcen_dict),
         "gebaeude": _kopie_wert(liste_gebaeude),
+        "items": _kopie_wert(liste_items or []),
         "kamera": {"x": kamera_x, "y": kamera_y},
         "tick_zaehler": tick_zaehler,
         "spiel_geschwindigkeit": spiel_geschwindigkeit,
@@ -79,9 +81,9 @@ def speichern(karten_daten, sterne_liste, ressourcen_dict, liste_gebaeude,
         "gegner": gegner.zustand_exportieren(),
         "ereignisse": ereignisse.zustand_exportieren(),
         "chunks": {
-            "besitzte": [[cx, cy] for cx, cy in __import__("main").besitzte_chunks],
-            "freigeschaltete": [[cx, cy] for cx, cy in __import__("main").freigeschaltete_chunks],
-            "gekauft": __import__("main").chunks_gekauft,
+            "besitzte": [[cx, cy] for cx, cy in chunks.besitzte_chunks],
+            "freigeschaltete": [[cx, cy] for cx, cy in chunks.freigeschaltete_chunks],
+            "gekauft": chunks.chunks_gekauft,
         },
     }
     try:
@@ -136,10 +138,9 @@ def laden():
         # Chunk-Zustand wiederherstellen (alte Spielstaende ohne das Feld starten mit Start-Chunk).
         chunk_daten = daten.get("chunks", {})
         try:
-            import main as _main_modul
-            _main_modul.besitzte_chunks = set(tuple(c) for c in chunk_daten.get("besitzte", [[4, 3]]))
-            _main_modul.freigeschaltete_chunks = set(tuple(c) for c in chunk_daten.get("freigeschaltete", []))
-            _main_modul.chunks_gekauft = int(chunk_daten.get("gekauft", 0))
+            chunks.besitzte_chunks = set(tuple(c) for c in chunk_daten.get("besitzte", [[4, 3]]))
+            chunks.freigeschaltete_chunks = set(tuple(c) for c in chunk_daten.get("freigeschaltete", []))
+            chunks.chunks_gekauft = int(chunk_daten.get("gekauft", 0))
         except Exception:
             pass
     except (OSError, json.JSONDecodeError, TypeError, ValueError) as fehler:
