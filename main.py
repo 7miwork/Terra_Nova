@@ -2332,6 +2332,26 @@ def ereignisse_verarbeiten():
                 baukosten_fehlen = ressourcen.fehlende_baukosten(
                     ressourcen_dict, gebaeude_auswahl)
 
+                # Schritt 5 (Items): Wenn auf einer Gebäudekachel ein Item liegt,
+                # wird es beim Bauen eingesammelt (entfernt + Ressource gutgeschrieben).
+                if not bauplatz_frei:
+                    item_auf_kachel = None
+                    for kx, ky in gebaeude_kacheln:
+                        gefunden = items.item_am_punkt(kx, ky, liste_items)
+                        if gefunden is not None:
+                            item_auf_kachel = gefunden
+                            break
+                    if item_auf_kachel is not None:
+                        ertrag = items.item_abbauen(item_auf_kachel)
+                        liste_items.remove(item_auf_kachel)
+                        for ress_name, betrag in ertrag.items():
+                            ressourcen_dict[ress_name] = (
+                                ressourcen_dict.get(ress_name, 0) + betrag)
+                        hud.meldung_anzeigen(
+                            f"Item eingesammelt: +{betrag} {ress_name}")
+                        ton.sound_abspielen("bauen")
+                        bauplatz_frei = True
+
                 if freischaltung:
                     hud.meldung_anzeigen(
                         f"{gebaeude_name}: {freischaltung}")

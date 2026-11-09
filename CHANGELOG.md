@@ -28,6 +28,14 @@ Jeder Eintrag trägt ein **Datum** (Format: TT.MM.JJJJ), wann die Änderung vorg
 - `README.md`: Steuerungstabelle korrigiert (S = Kamera-Scroll, V = Verteidigung, Leertaste, Linksklick)
 - `.clinerules`: Regel #7 — Tastenbelegung entzerrt (S für Kamera-Scroll, V für Verteidigung); Regel #9 — Changelog-Einträge benötigen Timestamp
 
+### 🚀 Weitere Verbesserungen — 09.11.2026
+
+| # | Datum | Was | Datei |
+|---|-------|-----|-------|
+| 7 | 09.11.2026 | Items werden beim Bauen auf derselben Kachel eingesammelt (entfernt + Ressource gutgeschrieben) statt einfach überdeckt | `main.py` |
+| 8 | 09.11.2026 | Einstellungen: "Auf Standard zurücksetzen" + "Fertig (Esc)" zu einem Button "Zurücksetzen & Fertig" zusammengeführt, der nach dem Klick das Menü schließt | `einstellungen.py` |
+| 9 | 09.11.2026 | Straße: Bild passt besser auf die Kachel (2D: fast volle Kachelbreite, Iso: flache Höhe statt Gebäude-Höhe) | `gebaeude.py` |
+
 ---
 
 ## Legende

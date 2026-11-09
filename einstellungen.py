@@ -73,8 +73,7 @@ ZEILEN = (
     ("schalter", "gitter_an",        "Gitterlinien"),
     ("stufe",    "fps",              "FPS-Limit"),
     ("stufe",    "kamera_tempo",     "Kamera-Tempo"),
-    ("knopf",    "zuruecksetzen",    "Auf Standard zurücksetzen"),
-    ("knopf",    "zurueck",          "Fertig (Esc)"),
+    ("knopf",    "zuruecksetzen",    "Zurücksetzen & Fertig"),
 )
 
 _werte = dict(STANDARD)   # die aktuellen Werte (eigene Kopie)
@@ -372,7 +371,8 @@ def _knopf_druecken(schluessel):
     if schluessel == "zuruecksetzen":
         zuruecksetzen()
         alle_anwenden()
-        return None
+        menue_schliessen()
+        return "zurueck"
     menue_schliessen()
     return "zurueck"
 

@@ -298,9 +298,12 @@ def _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten, breite, hoehe,
         # Normales Gebaeude: Breite fuellt die Kachel (fast) aus.
         bild_breite = max(breite, hoehe) * kachel_breite - 8
         # Hoehe: Gebaeude ragen nach oben, damit sie hintereinander erkennbar
-        # sind (Universitaet nutzt das aus).
-        bild_hoehe = max(kachel_hoehe * 2, bild_breite * 3 // 4) \
-            if (breite > 1 or hoehe > 1) else kachel_hoehe * 2 - 8
+        # sind (Universitaet nutzt das aus). Strasse bleibt flach.
+        if typ_daten.get("kuerzel") == "S":
+            bild_hoehe = kachel_hoehe - 8  # Strasse: flach, nur Kachelhoehe
+        else:
+            bild_hoehe = max(kachel_hoehe * 2, bild_breite * 3 // 4) \
+                if (breite > 1 or hoehe > 1) else kachel_hoehe * 2 - 8
         links = fuss_x - bild_breite // 2
     oben = fuss_y - bild_hoehe
     return pygame.Rect(links, oben, bild_breite, bild_hoehe)
@@ -433,8 +436,13 @@ def gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_y):
                 x_offset, y_offset = _kachel_groesse // 2, _kachel_groesse // 2
                 groesse = _kachel_groesse // 2
             else:
-                x_offset = y_offset = 4
-                groesse = _kachel_groesse - 8
+                # Strasse soll die Kachel fast voll ausfuellen (weniger Rand)
+                if typ_daten.get("kuerzel") == "S":
+                    x_offset = y_offset = 2
+                    groesse = _kachel_groesse - 4
+                else:
+                    x_offset = y_offset = 4
+                    groesse = _kachel_groesse - 8
             rect = pygame.Rect(pixel_x + x_offset, pixel_y + y_offset,
                                groesse, groesse)
         bild = bild_fuer_typ(typ_index, rect.size)
