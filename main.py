@@ -2056,8 +2056,9 @@ def ereignisse_verarbeiten():
                 return True
 
             # Fortgeschrittener Kurs: schwebende Fenster ein-/ausblenden.
-            # S = Verteidigung, C = Bauinfo, I = Uebersicht, L = Layout zurueck.
-            if ereignis.key == pygame.K_s:
+            # V = Verteidigung, C = Bauinfo, I = Uebersicht, L = Layout zurueck.
+            # S ist fuer Kamera-Scroll nach unten belegt.
+            if ereignis.key == pygame.K_v:
                 panel.umschalten("verteidigung")
                 return True
             if ereignis.key == pygame.K_c:
@@ -2462,8 +2463,8 @@ def ereignisse_verarbeiten():
         kamera_x += KAMERA_SPEED
     if gedrueckte_tasten[pygame.K_w]:
         kamera_y -= KAMERA_SPEED
-    # S ist belegt: Verteidigungspanel umschalten (siehe KEYDOWN-Handler oben).
-    # Kamera nach unten nur ueber Maus-Rand-Scrolling.
+    if gedrueckte_tasten[pygame.K_s]:
+        kamera_y += KAMERA_SPEED
 
     # ── Schritt 3: Rand-Scrolling mit der Maus ────────────────────────
     # Wie in Final Earth 2 (und vielen Strategiespielen): Wenn der

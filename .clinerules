@@ -73,13 +73,28 @@ Bevor eine neue Funktion geschrieben wird, prüfen ob sie bereits existiert:
 
 Bevor eine neue Taste vergeben wird, prüfen ob sie bereits belegt ist:
 - Jede Taste darf nur **eine** Funktion pro Kontext haben (z. B. nicht gleichzeitig Kamera-Scroll und Fenster-Umschalten)
-- `S` ist belegt: Verteidigungspanel im Spiel, Speichern im Pause-Menü
+- `S` ist belegt: Kamera-Scroll nach unten (Kamera-Scroll), Speichern im Pause-Menü
+- `V` ist belegt: Verteidigungspanel im Spiel
 - `Leertaste` ist belegt: Pause/Start (merkt sich Geschwindigkeit)
-- Kamera-Scroll nutzt nur `A`/`D`/`W` (nicht `S`)
+- Kamera-Scroll nutzt `A`/`D`/`W`/`S`
 
 ---
 
-## 7. Protokolle führen
+## 8. Changelog mit Timestamp pflegen
+
+Jede Änderung am Projekt muss in `CHANGELOG.md` eingetragen werden mit:
+- **Datum** (Format: TT.MM.JJJJ, z. B. 09.11.2026)
+- Kurze Beschreibung der Änderung
+- Betroffene Datei(en)
+
+Beispiel-Tabelle:
+| # | Datum | Was | Datei |
+|---|-------|-----|-------|
+| 1 | 09.11.2026 | S-Konflikt behoben | main.py |
+
+---
+
+## 9. Protokolle führen
 
 Nach jeder Unterrichtsstunde eine Protokolldatei erstellen unter:
 
@@ -98,13 +113,13 @@ Inhalt sollte enthalten:
 
 ---
 
-## 8. Temporäre Dateien aufräumen
+## 10. Temporäre Dateien aufräumen
 
 Hilfsskripte zum Debuggen (z. B. `_check_*.py`, `_diff_*.py`, `_fix_*.py`, `_patch_*.py`, `_build_*.py`) nach Gebrauch löschen. Sie dürfen nicht im Projektverbleib bleiben.
 
 ---
 
-## 9. Hausaufgaben-Dateien
+## 11. Hausaufgaben-Dateien
 
 Hausaufgaben liegen unter:
 ```
@@ -123,13 +138,13 @@ Punktesystem: Gesamt 300 Punkte, je Aufgabe 100 Punkte.
 
 ---
 
-## 10. Encoding
+## 12. Encoding
 
 Alle Text- und Python-Dateien immer mit **UTF-8** speichern.
 
 ---
 
-## 11. Handbuch Mike.md aktuell halten
+## 13. Handbuch Mike.md aktuell halten
 
 Nach jeder wesentlichen Änderung am Projekt muss das Handbuch aktualisiert werden:
 
@@ -151,7 +166,7 @@ Nach jeder wesentlichen Änderung am Projekt muss das Handbuch aktualisiert werd
 
 ---
 
-## 12. Befehle für PowerShell (Windows)
+## 14. Befehle für PowerShell (Windows)
 
 PowerShell hat Probleme mit:
 - Heredocs (`<< 'EOF'`) → nicht verwenden

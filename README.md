@@ -38,7 +38,7 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | +/− | Spielgeschwindigkeit |
 | ESC | Pause (**S** = speichern, **I** = Missionen, **A** = Achievements) |
 | Maus | Fenster an der Titelzeile ziehen; **–** minimiert, **X** blendet aus |
-| S / C / I / L | Fenster: Verteidigung / Bauinfo / Übersicht / Layout zurücksetzen |
+| V / C / I / L | Fenster: Verteidigung / Bauinfo / Übersicht / Layout zurücksetzen |
 | L | Spielstand laden (im Hauptmenü) |
 | R | Spielregeln wählen (im Hauptmenü) |
 
@@ -88,7 +88,7 @@ Die vier Info-Fenster — **Übersicht** (Kamera, Personal), **Verteidigung**,
 - **–** minimiert auf die Titelzeile (Knopf wird zu **+**),
 - **X** blendet das Fenster aus.
 
-Tasten: **S** Verteidigung, **C** Bauinfo, **I** Übersicht, **O** Ziel,
+Tasten: **V** Verteidigung, **C** Bauinfo, **I** Übersicht, **O** Ziel,
 **L** setzt die ganze Anordnung wieder auf die Standardpositionen zurück.
 Ein Klick in ein Fenster wird nicht an die Karte weitergegeben — man baut
 also nie versehentlich unter einem Fenster.
