@@ -281,21 +281,43 @@ oder den Block über ein kleines Python-Skript mit `\\r?\\n`-Mustern ersetzen.
 
 ---
 
-## 16. QA-Hausaufgabe: „Das Spiel auf Herz und Nieren prüfen“
+## 16. Hausaufgaben (Aktuell & Vergangene)
 
-Für die Schüler liegt eine ausfüllbare Hausaufgabendatei bereit:
+### Aktuelle Hausaufgabe (10.11.2026)
+
+**Datei:** `Hausaufgaben/10112026.md`  
+**Abgabe:** Samstag, 14.11.2026  
+**Thema:** Projektstruktur aufräumen & Straßenbilder erstellen
+
+**Drei Teile:**
+| Teil | Thema | Max. Punkte |
+|------|-------|-------------|
+| 1 | Ordnerstruktur prüfen | 30 |
+| 2 | Straßenbilder erstellen | 30 |
+| 3 | Diskussion im Unterricht | 40 |
+
+**Was die Schüler tun:**
+1. Die Projektdateien und Ordner analysieren (was ist fehl am Platz, was fehlt, was gehört zusammen)
+2. Straßenbilder entwerfen (`strasse.png`, `strasse_ecke.png`, `strasse_kreuz.png`) und beschreiben, wo sie gespeichert werden und wie sie geladen werden
+3. Diskussionspunkte vorbereiten für den Unterricht
+
+**Abgabe:** Direkt in die Markdown-Datei eintragen, keine Screenshots nötig.
+
+---
+
+### Vergangene Hausaufgabe (02.11.2026)
 
 **Datei:** `Hausaufgaben/02112026.md`  
-**Abgabe:** Samstag, 07.11.2026
+**Abgabe:** Samstag, 07.11.2026  
+**Thema:** Das Spiel auf Herz und Nieren prüfen (QA-Test)
 
-### Was die Schüler tun
-
+**Was die Schüler getan haben:**
 1. **Spielen:** `python main.py` starten, mindestens 30 Minuten in einer Spielregel spielen (Standard, Entspannt, Freies Spiel, Überleben).
 2. **Ausprobieren:** Alle Tasten drücken, Fenster verschieben, pausieren, speichern/laden, ohne Geld bauen, Gebäude abreißen.
 3. **Code lesen:** `main.py`, `hud.py`, `gebaeude.py`, `ressourcen.py` durchsehen.
 4. **Funde eintragen:** Direkte Eingabe in die leeren Tabellenfelder der Markdown-Datei.
 
-### Drei Aufgaben (je 100 Punkte, gesamt 300)
+**Drei Aufgaben (je 100 Punkte, gesamt 300):**
 
 | Aufgabe | Thema | Mindestanzahl |
 |---------|-------|---------------|
@@ -303,14 +325,14 @@ Für die Schüler liegt eine ausfüllbare Hausaufgabendatei bereit:
 | 2 | Überflüssigkeiten finden | 3 Überflüssigkeiten |
 | 3 | Verbesserungen & Ideen | 3 Vorschläge |
 
-### Bewertung pro Aufgabe (je 100 Punkte)
+**Bewertung pro Aufgabe (je 100 Punkte):**
 
 - **Genauigkeit** (40): Datei, Taste oder Menü genannt, Fund nachvollziehbar
 - **Beweis** (30): Test, Suche, Screenshot als Beleg
 - **Begründung / Umsetzung** (20): Warum besser, wie umsetzen?
 - **Vielfalt** (10): Verschiedene Dateien/Bereiche, nicht dreimal dasselbe
 
-### Wo tragen die Schüler ein?
+**Wo tragen die Schüler ein?**
 
 Direkt in die leeren Tabellenfelder der Datei `02112026.md`. Jede Aufgabe hat Platz für 3 Pflicht-Einträge plus 2 Bonus-Einträge (Zeilen 4 und 5).
 
