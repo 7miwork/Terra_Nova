@@ -69,6 +69,14 @@ Bevor eine neue Funktion geschrieben wird, prüfen ob sie bereits existiert:
 - `karte_zeichnen()` darf nur einmal definiert sein
 - Hilfsfunktionen nicht duplizieren
 
+## 7. Tastenbelegung entzerren
+
+Bevor eine neue Taste vergeben wird, prüfen ob sie bereits belegt ist:
+- Jede Taste darf nur **eine** Funktion pro Kontext haben (z. B. nicht gleichzeitig Kamera-Scroll und Fenster-Umschalten)
+- `S` ist belegt: Verteidigungspanel im Spiel, Speichern im Pause-Menü
+- `Leertaste` ist belegt: Pause/Start (merkt sich Geschwindigkeit)
+- Kamera-Scroll nutzt nur `A`/`D`/`W` (nicht `S`)
+
 ---
 
 ## 7. Protokolle führen

@@ -31,7 +31,9 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | Taste | Funktion |
 |---|---|
 | 1–9 | Baumenü-Kategorie (9 = Spezial / Verteidigung) |
-| ←/→, Leertaste | Gebäude wählen und bauen |
+| ←/→ | Gebäude in der Kategorie wählen |
+| Leertaste | Pause / Start (merkt sich Geschwindigkeit) |
+| Linksklick | Gebäude bauen / terraformen |
 | TAB / F / E | Baumenü, Forschung, Handel |
 | +/− | Spielgeschwindigkeit |
 | ESC | Pause (**S** = speichern, **I** = Missionen, **A** = Achievements) |

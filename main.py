@@ -631,6 +631,35 @@ def _boden_bilder_laden():
             BODEN_BILDER[typ_index] = bild
     _boden_bilder_geladen = True
 
+# Raute-foermige Bodenbilder fuer die Iso-Ansicht (gecacht)
+_boden_bilder_iso_cache = {}
+
+
+def _boden_bild_iso(typ_index):
+    if typ_index in _boden_bilder_iso_cache:
+        return _boden_bilder_iso_cache[typ_index]
+    bild = BODEN_BILDER.get(typ_index)
+    if bild is None:
+        _boden_bilder_iso_cache[typ_index] = None
+        return None
+    breite = iso.ISO_KACHEL_BREITE
+    hoehe = iso.ISO_KACHEL_HOEHE
+    bild_skaliert = pygame.transform.scale(bild, (breite, hoehe))
+    oberflaeche = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
+    oberflaeche.blit(bild_skaliert, (0, 0))
+    punkte = [(breite // 2, 0), (breite, hoehe // 2),
+              (breite // 2, hoehe), (0, hoehe // 2)]
+    maske = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
+    maske.fill((0, 0, 0, 0))
+    pygame.draw.polygon(maske, (255, 255, 255, 255), punkte)
+    for x in range(breite):
+        for y in range(hoehe):
+            if maske.get_at((x, y))[3] == 0:
+                oberflaeche.set_at((x, y), (0, 0, 0, 0))
+    _boden_bilder_iso_cache[typ_index] = oberflaeche
+    return oberflaeche
+
+
 
 
 def _farbe_dunkler(farbe, anteil=0.6):
@@ -953,569 +982,6 @@ uhr = pygame.time.Clock()
 # genau UNTER der Ressourcenleiste, keine Kachel wird vom HUD verdeckt.
 kamera_x = 0
 kamera_y = 0
-
-
-def kamera_zeichnen_y():
-    """Kamera-Y für das Weltzeichnen — um das HUD nach unten versetzt.
-
-    Die Ressourcenleiste (hud.HUD_HOEHE Pixel hoch) liegt über den oberen
-    Kacheln der Karte. Beim Zeichnen schieben wir die Welt deshalb um
-    diese Höhe nach unten. Bei der Umrechnung Maus → Kachel kommt
-    derselbe Versatz in umgekehrter Richtung zum Tragen:
-
-        kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
-    """
-    return kamera_y - hud.HUD_HOEHE
-
-# ── Karten-Daten (wie in Final Earth 2) ────────────────────────────────────
-# Die Karte ist ein 2D-Array (Liste von Listen).
-# Jede Kachel hat einen Typ: 0 = Erde, 1 = Gras, 2 = Gestein, 3 = Sand
-# In Final Earth 2 bestimmt der Bodentyp was du dort bauen kannst.
-#
-# karten_daten[zeile][spalte] gibt den Typ der Kachel an Position (spalte, zeile)
-# Beispiel: karten_daten[5][3] = 0 → Kachel in Zeile 5, Spalte 3 ist Erde
-karten_daten = []      # Wird in karte_generieren() befüllt
-
-# ── Sterne für den Hintergrund ─────────────────────────────────────────────
-# Wie in Final Earth 2 funkeln Sterne im Weltraum-Hintergrund.
-# Jeder Stern hat eine x/y-Position und eine Helligkeit.
-sterne_liste = []
-_hintergrund_surface = None
-
-# ── Ressourcen (ab Stunde 4) ────────────────────────────────────────────────
-# In Final Earth 2 verwaltest du Ressourcen wie Gold, Energie und Nahrung.
-# Diese Ressourcen werden ab Stunde 5 automatisch produziert und verbraucht.
-# Das Dictionary speichert jede Ressource mit ihrem Namen und aktuellen Wert.
-#
-# Neu in Stunde 6: Der Rohstoff "stein" kommt dazu!
-# Startwert = 20, damit der Steinmetz direkt nach dem Bau loslegen kann.
-#
-# Neu in Stunde 7: Der Rohstoff "bevoelkerung" kommt dazu!
-# Startwert = 10 — damit der Spieler direkt ein paar Bewohner hat
-# für die ersten Produktionsgebäude.
-#
-# Neu in Stunde 8: Der Rohstoff "nahrung" kommt dazu!
-# Startwert = 50 — damit die ersten Wohnhäuser versorgt werden können.
-# Neu in Stunde 10: Der Rohstoff "forschung" kommt dazu!
-# Startwert = 0 — Forschungspunkte werden im Labor produziert.
-ressourcen_dict = {"gold": 100, "energie": 50, "holz": 30, "stein": 20,
-                   "bevoelkerung": 10, "nahrung": 50, "forschung": 0,
-                   "kohle": 0, "eisen": 0, "roboter": 0, "stahl": 0}
-
-# ├────────────────────────────────────────────────────────────────────────────
-# │ STUNDE 3 — NEUE VARIABLEN                                                 │
-# │                                                                           │
-# │ In dieser Stunde kommen neue Variablen dazu:                              │
-# │ Wir brauchen eine Liste für alle Gebäude, die auf der Karte stehen.       │
-# │ Wir brauchen eine Variable, welches Gebäude gerade ausgewählt ist.        │
-# │ Wir brauchen die Maus-Position und wo der Spieler geklickt hat.           │
-# │                                                                           │
-# │ Diese Variablen werden hier definiert (global):                          │
-# └────────────────────────────────────────────────────────────────────────────┘
-
-liste_gebaeude = []       # Alle Gebäude auf der Karte
-liste_items = []          # Passive Gegenstände auf der Karte (Schritt 5)
-# Neu in Stunde 7: 0=Basis, 1=Reaktor, 2=Farm, 3=Holzfaeller,
-#                   4=Steinmetz, 5=Marktplatz, 6=Wohnhaus, 7=Labor
-gebaeude_auswahl = 0      # Aktuell ausgewähltes Gebäude
-_auswahl_kategorie = "1"  # Aktuelle Kategorie der Zifferntasten
-_auswahl_position = 0     # Position innerhalb der Kategorie
-_letztes_gebaeude = 0    # Schnellzugriff mit Taste 0
-maus_x = 0                # Maus-X-Position auf dem Bildschirm
-
-maus_y = 0                # Maus-Y-Position auf dem Bildschirm
-klick_x = -1              # Zuletzt angeklickte Kachel (Spalte)
-klick_y = -1              # Zuletzt angeklickte Kachel (Zeile)
-
-# ── Tick-System (aus Stunde 5) ─────────────────────────────────────────────
-# Der tick_zaehler zählt die Frames (Bilder pro Sekunde).
-# Bei 60 FPS ist 1 Sekunde = 60 Frames.
-# Wenn tick_zaehler 60 erreicht, rufen wir ressourcen_produzieren() auf
-# und setzen den Zähler zurück auf 0.
-# So läuft die Wirtschaft 1× pro Sekunde — nicht jeden Frame!
-#
-# Neu in Stunde 8: spiel_geschwindigkeit für Pause/Start/Beschleunigen
-#   1 = normal (1× pro Sekunde)
-#   0 = pausiert
-#   2 = doppelt so schnell (alle 30 Frames)
-tick_zaehler = 0
-spiel_geschwindigkeit = 1   # Normal-Geschwindigkeit
-_hilfe_offen = False         # Hilfe-Overlay ein/aus
-_terraform_modus = False     # Stunde 11: freie Kachel in fruchtbaren Boden umwandeln
-
-# ── Regelwerke und Spielzustände ─────────────────────────────────────────────
-SIEG_BEVOELKERUNG = 30
-SIEG_GEBAEUDE_TYP = 17  # Koloniezentrum
-NIEDERLAGE_NULLRESSOURCE_TICKS = 12
-
-REGELWERKE = {
-    "standard": {
-        "name": "Standard",
-        "beschreibung": "30 Bewohner + Zentrum; 12 Ticks ohne Versorgung = Niederlage. Gegner greifen an.",
-        "gegner_aktiv": True,
-        "gegner_faktor": 1.0,
-        "sieg_bevoelkerung": 30,
-        "sieg_aktiv": True,
-        "niederlage_ticks": 12,
-    },
-    "entspannt": {
-        "name": "Entspannt",
-        "beschreibung": "30 Bewohner + Zentrum; keine Niederlage und keine feindlichen Angriffe.",
-        "gegner_aktiv": False,
-        "gegner_faktor": 1.0,
-        "sieg_bevoelkerung": 30,
-        "sieg_aktiv": True,
-        "niederlage_ticks": None,
-    },
-    "freies_spiel": {
-        "name": "Freies Spiel",
-        "beschreibung": "Keine automatische Sieg-/Niederlage; dafür ganz ohne feindliche Angriffe.",
-        "gegner_aktiv": False,
-        "gegner_faktor": 1.0,
-        "sieg_bevoelkerung": 0,
-        "sieg_aktiv": False,
-        "niederlage_ticks": None,
-    },
-    "ueberleben": {
-        "name": "Überleben",
-        "beschreibung": "40 Bewohner + Zentrum; nur 6 Ticks ohne Versorgung. Gegner +30% stärker.",
-        "gegner_aktiv": True,
-        "gegner_faktor": 1.3,
-        "sieg_bevoelkerung": 40,
-        "sieg_aktiv": True,
-        "niederlage_ticks": 6,
-    },
-}
-
-# Mögliche Werte: hauptmenue, regelmenue, achievements, missionen, einstellungen, spiel, pause, sieg, niederlage
-spiel_status = "hauptmenue"
-_regel_auswahl = "standard"
-_regelmenue_ziel = "hauptmenue"
-_achievementmenue_ziel = "hauptmenue"
-_missionenmenue_ziel = "hauptmenue"
-_ziel_anzeige_sichtbar = True
-spiel_ende_titel = ""
-spiel_ende_grund = ""
-_null_nahrung_ticks = 0
-_null_energie_ticks = 0
-_geschwindigkeit_vor_pause = 1
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# BLOCK: PLANETEN-GENERIERUNG
-# ═════════════════════════════════════════════════════════════════════════════
-# In Final Earth 2 wird jeder Planet zufällig generiert.
-# Das bedeutet: Jedes Spiel sieht anders aus!
-# Hier erstellen wir unsere eigene zufällige Planeten-Oberfläche.
-# ═════════════════════════════════════════════════════════════════════════════
-
-def karte_generieren(planet_id="erde"):
-    """
-    Generiert eine zufällige Planeten-Oberfläche.
-    
-    Wie in Final Earth 2 gibt es verschiedene Bodentypen:
-    - Erde (0):   Der normale Boden — überall zu finden
-    - Gras (1):   Fruchtbare Flächen — gut für Farmen
-    - Gestein (2): Felsen — schwer zu bearbeiten aber wertvoll
-    - Sand (3):   Wüstenfläche
-    
-    Die Karte wird zufällig erstellt, aber mit "Bereichen":
-    - Große Flächen mit demselben Bodentyp (wie richtige Landschaften)
-    - Kein wildes Durcheinander!
-    """
-    global karten_daten
-    
-    # Fortgeschrittener Kurs (Planeten): Flaechenverteilung je Planet.
-    parameter = planeten.karten_parameter(planet_id)
-
-    # Leere Karte erstellen (erstmal alles Erde)
-    karten_daten = []
-    for zeile in range(WELT_HOEHE):
-        neue_zeile = []
-        for spalte in range(WELT_BREITE):
-            neue_zeile.append(0)  # 0 = Erde (Standard)
-        karten_daten.append(neue_zeile)
-    # ── Schritt 1: Sand-Flächen erzeugen (zuerst, damit Gras und Gestein
-    #     darueber gelegt werden koennen) ─────────────────────────────────
-    anzahl_sand_flaechen = parameter["sand_flaechen"]
-    for _ in range(anzahl_sand_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(8, 13)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 3  # 3 = Sand
-
-    # ── Schritt 2: Gesteins-Flächen erzeugen ──────────────────────────────
-    anzahl_gestein_flaechen = parameter["gestein_flaechen"]
-    for _ in range(anzahl_gestein_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(7, 11)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 2  # 2 = Gestein
-
-    # ── Schritt 3: Große Gras-Flächen erzeugen (zuletzt, damit sie
-    #     die anderen Flächen ueberlagern) ──────────────────────────────
-    anzahl_gras_flaechen = parameter["gras_flaechen"]
-    for _ in range(anzahl_gras_flaechen):
-        mitte_x = random.randint(5, WELT_BREITE - 5)
-        mitte_y = random.randint(5, WELT_HOEHE - 5)
-        radius = random.randint(6, 12)
-        for zeile in range(WELT_HOEHE):
-            for spalte in range(WELT_BREITE):
-                abstand = ((spalte - mitte_x) ** 2 + (zeile - mitte_y) ** 2) ** 0.5
-                if abstand < radius:
-                    karten_daten[zeile][spalte] = 1  # 1 = Gras
-
-    # ── Garantie: Start-Chunk enthaelt alle Bodentypen ─────────────────────
-    # Der Spieler muss von Anfang an auf alle Bodentypen zugreifen koennen,
-    # sonst kann er nicht weiterkommen (z.B. Gestein fuer Steinmetz).
-    start_x0 = chunks.START_CHUNK_X * chunks.CHUNK_GROESSE
-    start_y0 = chunks.START_CHUNK_Y * chunks.CHUNK_GROESSE
-    start_x1 = start_x0 + chunks.CHUNK_GROESSE
-    start_y1 = start_y0 + chunks.CHUNK_GROESSE
-    vorhandene_typen = set()
-    for zeile in range(start_y0, start_y1):
-        for spalte in range(start_x0, start_x1):
-            vorhandene_typen.add(karten_daten[zeile][spalte])
-    # Fehlende Bodentypen als kleine Flaeche (3x3) in den Start-Chunk setzen.
-    # Jeder fehlende Typ bekommt eine eigene Position, damit sie sich nicht
-    # gegenseitig ueberschreiben.
-    fehlende_typen = [bt for bt in (0, 1, 2, 3) if bt not in vorhandene_typen]
-    offset = 0
-    for boden_typ in fehlende_typen:
-        # Versetzte Position fuer jeden Typ
-        mitte_x = start_x0 + chunks.CHUNK_GROESSE // 4 + offset * (chunks.CHUNK_GROESSE // 3)
-        mitte_y = start_y0 + chunks.CHUNK_GROESSE // 4 + offset * (chunks.CHUNK_GROESSE // 3)
-        for dy in range(-1, 2):
-            for dx in range(-1, 2):
-                kx = mitte_x + dx
-                ky = mitte_y + dy
-                if (start_x0 <= kx < start_x1 and start_y0 <= ky < start_y1):
-                    karten_daten[ky][kx] = boden_typ
-        offset += 1
-
-
-def _hintergrund_aus_sternen_aufbauen():
-    """Baut den statischen Sternen-Layer aus dem aktuellen Sternzustand."""
-    global _hintergrund_surface
-    _hintergrund_surface = pygame.Surface((BILD_BREITE, BILD_HOEHE))
-    _hintergrund_surface.fill(FARBE_SCHWARZ)
-    for stern in sterne_liste:
-        if "farbe" in stern:
-            stern_farbe = tuple(stern["farbe"])
-        else:
-            # Kompatibilität mit älteren Spielständen, die nur Helligkeit
-            # gespeichert haben.
-            helligkeit = int(stern.get("helligkeit", 180))
-            stern_farbe = (helligkeit, helligkeit, helligkeit)
-        pygame.draw.circle(
-            _hintergrund_surface, stern_farbe,
-            (int(stern["x"]), int(stern["y"])), int(stern.get("groesse", 1)))
-
-
-def sterne_generieren():
-    """Erzeugt Sterne und rendert den statischen Hintergrund einmalig.
-
-    Die alte Version würfelte in jedem Frame für jeden Stern neue Farben aus.
-    Das erzeugte unnötige Arbeit und ließ die Sterne flackern. Jetzt werden
-    Position, Größe und Farbe einmalig beim Start der Welt festgelegt.
-    """
-    global sterne_liste
-    sterne_liste = []
-    for _ in range(150):
-        helligkeit = random.randint(100, 255)
-        farbvariante = random.randint(0, 9)
-        if farbvariante < 2:
-            stern_farbe = (helligkeit - 55, helligkeit - 35, helligkeit)
-        elif farbvariante < 4:
-            stern_farbe = (helligkeit, helligkeit - 15, helligkeit - 55)
-        else:
-            stern_farbe = (helligkeit, helligkeit, helligkeit)
-        stern = {
-            "x": random.randint(0, BILD_BREITE),
-            "y": random.randint(0, BILD_HOEHE),
-            "groesse": random.randint(1, 3),
-            "farbe": stern_farbe,
-        }
-        sterne_liste.append(stern)
-    _hintergrund_aus_sternen_aufbauen()
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# BLOCK: KARTE ZEICHNEN
-# ═════════════════════════════════════════════════════════════════════════════
-
-# Farben werden einmalig angelegt und nicht bei jedem Frame neu erstellt.
-BODEN_FARBEN = {
-    0: FARBE_ERDE_HELL,
-    1: FARBE_GRAS,
-    2: FARBE_GESTEIN,
-    3: FARBE_SAND,
-}
-
-# ── Boden-Texturen (Bilder statt einfarbiger Rechtecke) ──────────────────────
-# Die Bilder liegen unter bilder/terrain/ und werden 1:1 auf Kacheln skaliert.
-BODEN_BILDER = {}
-_boden_bilder_geladen = False
-
-
-def _boden_bilder_laden():
-    """Laedt die Boden-Texturen aus bilder/terrain/ einmalig."""
-    global _boden_bilder_geladen
-    if _boden_bilder_geladen:
-        return
-    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "terrain")
-    dateinamen = {
-        0: "erde.png",
-        1: "gras.png",
-        2: "stein.png",
-        3: "sand.png",
-    }
-    for typ_index, dateiname in dateinamen.items():
-        bild_pfad = os.path.join(bilder_ordner, dateiname)
-        if os.path.exists(bild_pfad):
-            bild = pygame.image.load(bild_pfad).convert_alpha()
-            BODEN_BILDER[typ_index] = bild
-    _boden_bilder_geladen = True
-
-# Raute-foermige Bodenbilder fuer die Iso-Ansicht (gecacht)
-_boden_bilder_iso_cache = {}
-
-
-def _boden_bild_iso(typ_index):
-    if typ_index in _boden_bilder_iso_cache:
-        return _boden_bilder_iso_cache[typ_index]
-    bild = BODEN_BILDER.get(typ_index)
-    if bild is None:
-        _boden_bilder_iso_cache[typ_index] = None
-        return None
-    breite = iso.ISO_KACHEL_BREITE
-    hoehe = iso.ISO_KACHEL_HOEHE
-    bild_skaliert = pygame.transform.scale(bild, (breite, hoehe))
-    oberflaeche = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
-    oberflaeche.blit(bild_skaliert, (0, 0))
-    punkte = [(breite // 2, 0), (breite, hoehe // 2),
-              (breite // 2, hoehe), (0, hoehe // 2)]
-    maske = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
-    maske.fill((0, 0, 0, 0))
-    pygame.draw.polygon(maske, (255, 255, 255, 255), punkte)
-    for x in range(breite):
-        for y in range(hoehe):
-            if maske.get_at((x, y))[3] == 0:
-                oberflaeche.set_at((x, y), (0, 0, 0, 0))
-    _boden_bilder_iso_cache[typ_index] = oberflaeche
-    return oberflaeche
-
-
-def _farbe_dunkler(farbe, anteil=0.6):
-    """Macht eine Farbe dunkler (fuer die Erdwand an der Vorderkante).
-
-    Die Wand benutzt dieselbe Bodenfarbe, nur abgedunkelt — so sieht man
-    sofort, dass sie zur Karte gehoert und Schatten darstellt. Der Anteil
-    0.6 heisst: 60 Prozent der Helligkeit bleiben uebrig.
-    """
-    return tuple(max(0, min(255, int(kanal * anteil))) for kanal in farbe)
-
-
-def _karte_2d_zeichnen(gitter_an, erste_spalte, letzte_spalte,
-                       erste_zeile, letzte_zeile, kamera_anzeige_y):
-    """Zeichnet den Boden als flache Rechtecke (alte Ansicht).
-
-    Diese Funktion gibt es nur zum Vergleichen im Unterricht: Mit
-    ISO_ANSICHT = False laeuft das Spiel genau wie frueher weiter.
-    """
-    for zeile in range(erste_zeile, letzte_zeile):
-        pixel_y = zeile * KACHEL_GROESSE - kamera_anzeige_y
-        for spalte in range(erste_spalte, letzte_spalte):
-            pixel_x = spalte * KACHEL_GROESSE - kamera_x
-            kachel_rect = pygame.Rect(
-                pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            _boden_bilder_laden()
-            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
-            if _boden_bild is not None:
-                fenster.blit(
-                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
-                    kachel_rect)
-            else:
-                pygame.draw.rect(
-                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
-            if gitter_an:
-                pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
-
-
-def _karte_iso_zeichnen(gitter_an):
-    """Zeichnet den Boden als Rauten und die Erdwand an der Vorderkante.
-
-    Die Kacheln kommen von hinten nach vorne auf den Bildschirm, damit
-    spaeter Gebaeude und die Erdwand in der richtigen Reihenfolge liegen.
-    Die Erdwand ist ein dunkles Stueck unter der letzten Zeile und der
-    letzten Spalte — die Karte wirkt dadurch wie eine Platte, die ueber
-    dem Sternenhimmel schwebt.
-    """
-    kamera_anzeige_y = kamera_zeichnen_y()
-    kacheln = []
-    for zeile in range(WELT_HOEHE):
-        for spalte in range(WELT_BREITE):
-            # Nur sichtbare Rauten einsammeln (Culling aus iso.py).
-            ecke_x, ecke_y = iso.raster_zu_welt(spalte, zeile)
-            bild_x = ecke_x - kamera_x
-            bild_y = ecke_y - kamera_anzeige_y
-            if (bild_x + iso.ISO_HALB_BREITE < 0
-                    or bild_x - iso.ISO_HALB_BREITE > BILD_BREITE
-                    or bild_y + iso.ISO_KACHEL_HOEHE < 0
-                    or bild_y > BILD_HOEHE):
-                continue
-            kacheln.append((spalte, zeile))
-    # Von hinten nach vorne: kleinere Summe aus spalte + zeile zuerst.
-    kacheln.sort(key=lambda kachel: (kachel[0] + kachel[1], kachel[1]))
-    for spalte, zeile in kacheln:
-        punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
-        _boden_bilder_laden()
-        _boden_bild_iso_erg = _boden_bild_iso(karten_daten[zeile][spalte])
-        if _boden_bild_iso_erg is not None:
-            fenster.blit(_boden_bild_iso_erg,
-                         (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
-        else:
-            pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
-                            punkte)
-        if gitter_an:
-            pygame.draw.polygon(fenster, FARBE_GITTER, punkte, 1)
-def _kartenrand_links():
-    """Zeichnet eine duenne Kontur entlang der Linkskante (Iso).
-
-    Die linke Kante (linke Rautenreihe) hat keine Erdwand. Eine duenne
-    Kontur schliesst die Platte dort sauber ab.
-    """
-    kamera_anzeige_y = kamera_zeichnen_y()
-    oben = iso.raster_zu_welt(0, 0)
-    links = iso.raster_zu_welt(0, WELT_HOEHE - 1)
-    p0 = (oben[0], oben[1])
-    p1 = (links[0] - iso.ISO_HALB_BREITE, links[1] + iso.ISO_HALB_HOEHE)
-    punkte = [(p0[0] - kamera_x, p0[1] - kamera_anzeige_y),
-              (p1[0] - kamera_x, p1[1] - kamera_anzeige_y)]
-    xs = [p[0] for p in punkte]
-    ys = [p[1] for p in punkte]
-    if (max(xs) < -20 or min(xs) > BILD_BREITE + 20
-            or max(ys) < -20 or min(ys) > BILD_HOEHE + 20):
-        return
-    pygame.draw.line(fenster, FARBE_KARTENRAND, punkte[0], punkte[1], KARTENRAND_DICKE)
-
-
-def karte_zeichnen():
-
-
-    """Zeichnet nur den sichtbaren Ausschnitt der Planetenoberfläche.
-
-    Früher wurden alle 60 x 40 = 2.400 Kacheln geprüft. Sichtbar sind je nach
-    Kamera aber nur ungefähr 22 x 15 Kacheln. Die Start- und Endindizes sparen
-    deshalb viele Schleifendurchläufe und unnötige Rechteckprüfungen.
-    """
-    # Einstellung "Gitterlinien": lässt sich im Einstellungsmenü abschalten.
-    gitter_an = einstellungen.wert("gitter_an")
-    # Isometrische Ansicht (Schritt 2): Rauten statt Rechtecke. Mit
-    # ISO_ANSICHT = False laeuft alles wie frueher (fuer den Vergleich).
-    if ISO_ANSICHT:
-        _karte_iso_zeichnen(gitter_an)
-        return
-    erste_spalte = max(0, kamera_x // KACHEL_GROESSE)
-    letzte_spalte = min(
-        WELT_BREITE,
-        (kamera_x + BILD_BREITE) // KACHEL_GROESSE + 2,
-    )
-    # Die Welt beginnt unter der Ressourcenleiste (siehe kamera_zeichnen_y).
-    kamera_anzeige_y = kamera_zeichnen_y()
-    erste_zeile = max(0, kamera_anzeige_y // KACHEL_GROESSE)
-    letzte_zeile = min(
-        WELT_HOEHE,
-        (kamera_anzeige_y + BILD_HOEHE) // KACHEL_GROESSE + 2,
-    )
-
-    for zeile in range(erste_zeile, letzte_zeile):
-        pixel_y = zeile * KACHEL_GROESSE - kamera_anzeige_y
-        for spalte in range(erste_spalte, letzte_spalte):
-            pixel_x = spalte * KACHEL_GROESSE - kamera_x
-            kachel_rect = pygame.Rect(
-                pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            _boden_bilder_laden()
-            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
-            if _boden_bild is not None:
-                fenster.blit(
-                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
-                    kachel_rect)
-            else:
-                pygame.draw.rect(
-                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
-            if gitter_an:
-                pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
-
-
-def items_generieren():
-    """Verteilt passive Gegenstände auf der Karte (Schritt 5).
-
-    Items sind reine Boden-Objekte: Ressourcen, Fels, Deko. Sie werden
-    auf zufälligen freien Kacheln platziert — nicht auf Gebäuden und
-    nicht auf derselben Kachel zweimal. Der 2x2-Fels braucht vier freie
-    Kacheln. Der Spielstand speichert Items (noch) nicht; beim Laden,
-    Wechseln und Neustart werden sie neu verteilt.
-    """
-    global liste_items
-    liste_items = []
-    belegt = set()
-    for ein_gebaeude in liste_gebaeude:
-        typ_daten = gebaeude.GEBAEUDE_TYPEN[ein_gebaeude["typ"]]
-        for dy in range(typ_daten.get("hoehe", 1)):
-            for dx in range(typ_daten.get("breite", 1)):
-                belegt.add((ein_gebaeude["kachel_x"] + dx,
-                            ein_gebaeude["kachel_y"] + dy))
-    kandidaten = [(spalte, zeile)
-                  for zeile in range(BAU_FELD_START_Y, BAU_FELD_ENDE_Y)
-                  for spalte in range(BAU_FELD_START_X, BAU_FELD_ENDE_X)
-                  if (spalte, zeile) not in belegt]
-    random.shuffle(kandidaten)
-    for spalte, zeile in kandidaten:
-        if len(liste_items) >= 14:
-            break
-        typ_index = random.randrange(len(items.ITEM_TYPEN))
-        flaeche = items.item_flaeche(typ_index, spalte, zeile)
-        # Der gesamte Fussabdruck muss frei sein (auch für 2x2-Items).
-        if any(kachel in belegt for kachel in flaeche):
-            continue
-        belegt.update(flaeche)
-        liste_items.append({"typ": typ_index, "kachel_x": spalte,
-                            "kachel_y": zeile})
-
-
-# ── Gebäude zeichnen ────────────────────────────────────────────────────────
-# Die Funktion gebaeude_zeichnen() wurde in Stunde 3 in das Modul
-# gebaeude.py ausgelagert. Sie wird in der Spielschleife aufgerufen:
-#   gebaeude.gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_y)
-# Neu in Stunde 6: Die Funktion funktioniert automatisch für alle
-# 5 Gebäudetypen, weil sie Farbe+Kürzel aus GEBAEUDE_TYPEN holt.
-
-
-def maus_zu_kachel(maus_x, maus_y):
-    """Rechnet eine Mausposition in eine Kachel um (fuer Bauen und Abreissen).
-
-    In der alten 2D-Ansicht teilen wir (Maus + Kamera) durch die
-    Kachelgroesse. In der Iso-Ansicht dreht iso.welt_zu_raster die
-    Bildschirmposition zurueck ins Raster. Die y-Richtung nutzt immer
-    kamera_zeichnen_y(), weil die Welt um die Ressourcenleiste versetzt
-    liegt. Ausserhalb der Karte kommen negative oder zu grosse Werte —
-    der Aufrufer prueft die Grenzen wie bisher.
-    """
-    if ISO_ANSICHT:
-        return iso.welt_zu_raster(maus_x + kamera_x,
-                                  maus_y + kamera_zeichnen_y())
-    kachel_x = (maus_x + kamera_x) // KACHEL_GROESSE
-    kachel_y = (maus_y + kamera_zeichnen_y()) // KACHEL_GROESSE
-    return kachel_x, kachel_y
 
 
 def kamera_begrenzen():
@@ -2688,9 +2154,10 @@ def ereignisse_verarbeiten():
                 _hilfe_offen = not _hilfe_offen
             
             # ── Stunde 11: Pause und Geschwindigkeit ohne Ziffernkonflikt ──
-            # Leertaste pausiert. Plus und Minus ändern die Spielgeschwindigkeit.
+            # Leertaste pausiert/startet und merkt sich die vorherige Geschwindigkeit.
+            # Plus und Minus ändern die Spielgeschwindigkeit.
             if ereignis.key == pygame.K_SPACE:
-                spiel_geschwindigkeit = 1 if spiel_geschwindigkeit == 0 else 0
+                pause_umschalten()
                 status = "pausiert" if spiel_geschwindigkeit == 0 else "gestartet"
                 print(f"Spiel {status}!")
             elif ereignis.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
@@ -2995,8 +2462,8 @@ def ereignisse_verarbeiten():
         kamera_x += KAMERA_SPEED
     if gedrueckte_tasten[pygame.K_w]:
         kamera_y -= KAMERA_SPEED
-    if gedrueckte_tasten[pygame.K_s]:
-        kamera_y += KAMERA_SPEED
+    # S ist belegt: Verteidigungspanel umschalten (siehe KEYDOWN-Handler oben).
+    # Kamera nach unten nur ueber Maus-Rand-Scrolling.
 
     # ── Schritt 3: Rand-Scrolling mit der Maus ────────────────────────
     # Wie in Final Earth 2 (und vielen Strategiespielen): Wenn der
