@@ -128,8 +128,8 @@ def bild_fuer_typ(typ_index, groesse=(30, 30)):
 # STRASSEN-BILDER MIT ROTATIONEN UND KREUZUNGEN
 # ═══════════════════════════════════════════════════════════════════
 
-# Richtungskürzel: N=(0,-1), E=(1,0), S=(0,1), W=(-1,0) in Gitterkoordinaten
-# Im Isomview entspricht das: N=NW, E=NE, S=SE, W=SW
+# Richtungskürzel: N=(0,-1), E=(1,0), S=(0,1), W=(-1,0) in Gitterkoordinaten.
+# In der Iso-Projektion zeigen diese Schritte nach NE, SE, SW und NW.
 
 _STRASSE_BILDER = {}           # geladene Straßenbilder: dateiname -> Surface
 _STRASSE_BILD_CACHE = {}       # gecachete skalierte Versionen
@@ -138,25 +138,27 @@ _STRASSE_BILD_CACHE = {}       # gecachete skalierte Versionen
 # Die Schülerbilder aus bilder/strasse/ werden nach diesen Kombinationen zugeordnet.
 # Die Richtungskürzel beziehen sich auf Gitterkoordinaten (N=oben, E=rechts, S=unten, W=links).
 STRASSE_VERBINDUNGEN_ZU_BILD = {
-    frozenset(["N", "S"]): "strasse_gerade_nw_se.png",
-    frozenset(["E", "W"]): "strasse_gerade_ne_sw.png",
-    frozenset(["N", "E"]): "strasse_kurve_nw_ne.png",
-    frozenset(["E", "S"]): "strasse_kurve_ne_se.png",
-    frozenset(["S", "W"]): "strasse_kurve_se_sw.png",
-    frozenset(["W", "N"]): "strasse_kurve_sw_nw.png",
-    frozenset(["E", "S", "W"]): "strasse_t_ohne_nw.png",
-    frozenset(["N", "S", "W"]): "strasse_t_ohne_ne.png",
-    frozenset(["N", "E", "W"]): "strasse_t_ohne_se.png",
-    frozenset(["N", "E", "S"]): "strasse_t_ohne_sw.png",
+    frozenset(["N", "S"]): "strasse_gerade_ne_sw.png",
+    frozenset(["E", "W"]): "strasse_gerade_nw_se.png",
+    frozenset(["N", "E"]): "strasse_kurve_ne_se.png",
+    frozenset(["E", "S"]): "strasse_kurve_se_sw.png",
+    frozenset(["S", "W"]): "strasse_kurve_sw_nw.png",
+    frozenset(["W", "N"]): "strasse_kurve_nw_ne.png",
+    frozenset(["E", "S", "W"]): "strasse_t_ohne_ne.png",
+    frozenset(["N", "S", "W"]): "strasse_t_ohne_se.png",
+    frozenset(["N", "E", "W"]): "strasse_t_ohne_sw.png",
+    frozenset(["N", "E", "S"]): "strasse_t_ohne_nw.png",
     frozenset(["N", "E", "S", "W"]): "strasse_kreuz.png",
 }
+
+STRASSE_GEGENRICHTUNG = {"N": "S", "E": "W", "S": "N", "W": "E"}
 
 
 def strasse_bilder_laden():
     """Lädt alle Straßenbilder aus bilder/strasse/.
 
-    Wird einmalig bei der Initialisierung aufgerufen.
-    Die Bilder stammen aus der Schüler-Hausaufgabe (10.11.2026).
+    Die Iso-Grafiken sind bereits richtig gedreht und werden nur noch auf
+    die Kachelgröße skaliert.
     """
     global _STRASSE_BILDER
     strasse_ordner = os.path.join(os.path.dirname(__file__), "bilder", "strasse")
@@ -181,6 +183,11 @@ def strasse_bild_fuer_verbindungen(verbindungen, groesse):
     if not verbindungen:
         # Keine Verbindungen: Fallback auf gerade Straße (N+S)
         verbindungen = frozenset(["N", "S"])
+    elif len(verbindungen) == 1:
+        richtung = next(iter(verbindungen))
+        gegenrichtung = STRASSE_GEGENRICHTUNG.get(richtung)
+        if gegenrichtung is not None:
+            verbindungen = frozenset((richtung, gegenrichtung))
 
     dateiname = STRASSE_VERBINDUNGEN_ZU_BILD.get(verbindungen)
     if dateiname is None:
@@ -193,8 +200,6 @@ def strasse_bild_fuer_verbindungen(verbindungen, groesse):
 
     schluessel = (dateiname, tuple(groesse))
     if schluessel not in _STRASSE_BILD_CACHE:
-        if dateiname == "strasse_kreuz.png":
-            bild = pygame.transform.rotate(bild, 45)
         _STRASSE_BILD_CACHE[schluessel] = pygame.transform.smoothscale(
             bild, groesse)
     return _STRASSE_BILD_CACHE[schluessel]
