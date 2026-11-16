@@ -450,6 +450,7 @@ def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
     Das Ergebnis ist das Bildschirm-Rechteck des Gebaeudes: Daran haengen
     Kuerzel, Warn-Dreieck und roter Punkt — so verrutscht nichts.
     """
+    bild_vorhanden = False
     if breite == 1 and hoehe == 1 and stapel_index:
         # Zweites Gebaeude auf derselben Kachel: kleiner, rechts oben.
         rect = _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten,
@@ -463,6 +464,7 @@ def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
             bild = bild_fuer_typ(typ_index, rect.size)
         if bild is not None:
             _fenster.blit(bild, rect)
+            bild_vorhanden = True
         else:
             pygame.draw.rect(_fenster, typ_daten["farbe"], rect)
     elif typ_index == 9 and strasse_bild_fuer_verbindungen(
@@ -482,13 +484,15 @@ def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
                                        stapel_index)
         bild = bild_fuer_typ(typ_index, rect.size)
         _fenster.blit(bild, rect)
+        bild_vorhanden = True
     else:
         # Kein Bild vorhanden: Iso-Quader als Platzhalter.
         rect = _quader_zeichnen(typ_daten["farbe"], fuss_x, fuss_y,
                                 max(1, breite), hoehe)
     # Der weisse Rahmen wurde entfernt, da die gedrehten Gebaeude-Bilder
     # aus terra_nova_24_gebaeude_pngs bereits saubere eigene Rander haben.
-    if typ_index != 9:
+    if typ_index != 9 and (
+            (breite == 1 and hoehe == 1) or not bild_vorhanden):
         text_schluessel = (typ_index, (20, 20, 20))
         if text_schluessel not in _kuerzel_cache:
             _kuerzel_cache[text_schluessel] = schrift.render(
@@ -601,15 +605,16 @@ def gebaeude_zeichnen(liste_gebaeude, kamera_x, kamera_y):
         else:
             pygame.draw.rect(_fenster, typ_daten["farbe"], rect)
         pygame.draw.rect(_fenster, (255, 255, 255), rect, 2)
-        text_schluessel = (typ_index, (20, 20, 20))
-        if text_schluessel not in _kuerzel_cache:
-            _kuerzel_cache[text_schluessel] = schrift.render(
-                typ_daten["kuerzel"], True, (20, 20, 20))
-        text = _kuerzel_cache[text_schluessel]
-        if breite == 1 and hoehe == 1:
-            _fenster.blit(text, text.get_rect(center=rect.center))
-        else:
-            _fenster.blit(text, (rect.left + 6, rect.top + 4))
+        if bild is None or (breite == 1 and hoehe == 1):
+            text_schluessel = (typ_index, (20, 20, 20))
+            if text_schluessel not in _kuerzel_cache:
+                _kuerzel_cache[text_schluessel] = schrift.render(
+                    typ_daten["kuerzel"], True, (20, 20, 20))
+            text = _kuerzel_cache[text_schluessel]
+            if breite == 1 and hoehe == 1:
+                _fenster.blit(text, text.get_rect(center=rect.center))
+            else:
+                _fenster.blit(text, (rect.left + 6, rect.top + 4))
         if gebaeude.get("arbeitet") is False and typ_index not in (0, 9, 14, 17):
             pygame.draw.circle(_fenster, (220, 70, 70), (rect.right - 7, rect.top + 7), 4)
         # Fortgeschrittener Kurs (Logistik): Gelbes Warndreieck, wenn keine
