@@ -21,10 +21,16 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | Ort | Inhalt |
 |---|---|
 | `main.py` + Module | Der Spielcode — direkt hier starten mit `python main.py` |
-| `bilder/`, `sounds/` | Grafiken und Töne, die das Spiel lädt |
+| `bilder/terrain/` | Boden-Bilder (erde, gras, sand, stein) |
+| `bilder/gebaeude/` | Gebäude-Bilder (nach Schüler-Hausaufgabe sortiert) |
+| `bilder/items/` | Item-Icons |
+| `bilder/strasse/` | Straßenbilder (gerade, Kurven, T-Kreuzungen, X-Kreuzung — von Schülern erstellt) |
+| `audio/` | Sound-Dateien (wurde von `sounds/` verschoben, Schüler-Hausaufgabe) |
+| `werkzeuge/` | Hilfs-Skripte (`bilder_erzeugen.py`, `sounds_erzeugen.py` — nicht zum Spielstart nötig) |
 | `tests/` | Selbsttests: `test_*.py` und `check.py` (siehe unten) |
 | **`Dokumentation/`** | Alle Handbücher und Anleitungen (.md), PDFs unter `Dokumentation/PDF/`, Erklärbilder unter `Dokumentation/Erklaer Bilder/` |
-| **`unnoetig/`** | Ablage für Dateien, die das Spiel nicht braucht (Altlasten, Einmal-Skripte) — wird nicht ins Repository mitgeschrieben |
+| **`unnoetig/`** | Ablage für Dateien, die das Spiel nicht braucht (Altlasten, Einmal-Skripte, doppelte Bilder) — wird nicht ins Repository mitgeschrieben |
+| **`saves/`** | Ordner für gespeicherte Spielstände (Schüler-Vorschlag aus der Hausaufgabe) |
 
 ## Steuerung (Auszug, vollständig mit Taste H im Spiel)
 
@@ -119,8 +125,8 @@ Alte Spielstände bleiben ladbar: Neue Felder (`gegner`, `verteidiger`,
 
 ## Dateien neu erzeugen
 
-    python bilder_erzeugen.py   # Platzhalter-PNGs für Gebäude 21–23
-    python sounds_erzeugen.py   # Standard-Sounds und Hintergrundmusik
+    python werkzeuge/bilder_erzeugen.py   # Platzhalter-PNGs für Gebäude 21–23
+    python werkzeuge/sounds_erzeugen.py   # Standard-Sounds und Hintergrundmusik
 
 Die erzeugten Dateien liegen bei — die Skripte braucht man nur zum
 Neuerzeugen oder zum eigenen Anpassen (Anleitungen: `Dokumentation/BILDER_ANLEITUNG.md`).

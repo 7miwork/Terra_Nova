@@ -19,6 +19,8 @@ GEBAEUDE_TYPEN = [
     {"name": "Universitaet", "bild": "universitaet.png", "farbe": (150, 200, 255), "kuerzel": "L", "taste": "8", "breite": 2, "hoehe": 3},
     {"name": "Mine", "bild": "mine.png", "farbe": (110, 110, 120), "kuerzel": "M", "taste": "9", "breite": 1, "hoehe": 1},
     {"name": "Strasse", "bild": "strasse.png", "farbe": (90, 90, 95), "kuerzel": "S", "taste": "0", "breite": 1, "hoehe": 1},
+    # Straße: Das Bild wird dynamisch nach den Verbindungen (N/E/S/W) gewählt.
+    # Siehe STRASSE_VERBINDUNGEN_ZU_BILD und strasse_bild_fuer_verbindungen().
     {"name": "Fusionsreaktor", "bild": "fusionsreaktor.png", "farbe": (255, 110, 210), "kuerzel": "F", "taste": "G", "breite": 1, "hoehe": 1},
     {"name": "Roboterfabrik", "bild": "roboterfabrik.png", "farbe": (100, 210, 210), "kuerzel": "R", "taste": "T", "breite": 1, "hoehe": 1},
     {"name": "Stahlwerk", "bild": "stahlwerk.png", "farbe": (230, 130, 70), "kuerzel": "S", "taste": "", "breite": 1, "hoehe": 1},
@@ -86,7 +88,9 @@ def gebaeude_initialisieren(fenster_obj, kachel_groesse):
     global _kuerzel_cache, _schrift
     _fenster = fenster_obj
     _kachel_groesse = kachel_groesse
-    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder")
+    # Gebäude-Bilder liegen nun im Unterordner bilder/gebaeude/
+    # (Sortierung nach Schüler-Hausaufgabe: Bilder nach Typ getrennt)
+    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "gebaeude")
     _bilder = {}
     _bilder_cache = {}
     _kuerzel_cache = {}
@@ -98,6 +102,8 @@ def gebaeude_initialisieren(fenster_obj, kachel_groesse):
         bild_pfad = os.path.join(bilder_ordner, dateiname)
         if os.path.exists(bild_pfad):
             _bilder[typ_daten["name"]] = pygame.image.load(bild_pfad).convert_alpha()
+    # Straßenbilder aus bilder/strasse/ laden (für dynamische Bildwahl nach Verbindungen)
+    strasse_bilder_laden()
 
 
 def bild_fuer_typ(typ_index, groesse=(30, 30)):
@@ -116,6 +122,123 @@ def bild_fuer_typ(typ_index, groesse=(30, 30)):
     if schluessel not in _bilder_cache:
         _bilder_cache[schluessel] = pygame.transform.smoothscale(bild, groesse)
     return _bilder_cache[schluessel]
+
+
+# ═══════════════════════════════════════════════════════════════════
+# STRASSEN-BILDER MIT ROTATIONEN UND KREUZUNGEN
+# ═══════════════════════════════════════════════════════════════════
+
+# Richtungskürzel: N=(0,-1), E=(1,0), S=(0,1), W=(-1,0) in Gitterkoordinaten
+# Im Isomview entspricht das: N=NW, E=NE, S=SE, W=SW
+
+_STRASSE_BILDER = {}           # geladene Straßenbilder: dateiname -> Surface
+_STRASSE_BILD_CACHE = {}       # gecachete skalierte Versionen
+
+# Mapping: Richtungskombination -> Dateiname
+# Die Schülerbilder aus bilder/strasse/ werden nach diesen Kombinationen zugeordnet.
+# Die Richtungskürzel beziehen sich auf Gitterkoordinaten (N=oben, E=rechts, S=unten, W=links).
+STRASSE_VERBINDUNGEN_ZU_BILD = {
+    frozenset(["N", "S"]): "strasse_gerade_nw_se.png",
+    frozenset(["E", "W"]): "strasse_gerade_ne_sw.png",
+    frozenset(["N", "E"]): "strasse_kurve_nw_ne.png",
+    frozenset(["E", "S"]): "strasse_kurve_ne_se.png",
+    frozenset(["S", "W"]): "strasse_kurve_se_sw.png",
+    frozenset(["W", "N"]): "strasse_kurve_sw_nw.png",
+    frozenset(["E", "S", "W"]): "strasse_t_ohne_nw.png",
+    frozenset(["N", "S", "W"]): "strasse_t_ohne_ne.png",
+    frozenset(["N", "E", "W"]): "strasse_t_ohne_se.png",
+    frozenset(["N", "E", "S"]): "strasse_t_ohne_sw.png",
+    frozenset(["N", "E", "S", "W"]): "strasse_kreuz.png",
+}
+
+
+def strasse_bilder_laden():
+    """Lädt alle Straßenbilder aus bilder/strasse/.
+
+    Wird einmalig bei der Initialisierung aufgerufen.
+    Die Bilder stammen aus der Schüler-Hausaufgabe (10.11.2026).
+    """
+    global _STRASSE_BILDER
+    strasse_ordner = os.path.join(os.path.dirname(__file__), "bilder", "strasse")
+    if not os.path.isdir(strasse_ordner):
+        return
+    for datei in sorted(os.listdir(strasse_ordner)):
+        if datei.endswith(".png"):
+            pfad = os.path.join(strasse_ordner, datei)
+            try:
+                bild = pygame.image.load(pfad).convert_alpha()
+                _STRASSE_BILDER[datei] = bild
+            except pygame.error:
+                pass
+
+
+def strasse_bild_fuer_verbindungen(verbindungen, groesse):
+    """Liefert das passende Straßenbild für eine Richtungskombination.
+
+    `verbindungen` ist eine frozenset mit Richtungskürzeln (z. B. {"N", "E"}).
+    Gibt None zurück, wenn kein passendes Bild gefunden wurde.
+    """
+    if not verbindungen:
+        # Keine Verbindungen: Fallback auf gerade Straße (N+S)
+        verbindungen = frozenset(["N", "S"])
+
+    dateiname = STRASSE_VERBINDUNGEN_ZU_BILD.get(verbindungen)
+    if dateiname is None:
+        # Unbekannte Kombination: Fallback auf gerade Straße
+        dateiname = "strasse_gerade_nw_se.png"
+
+    bild = _STRASSE_BILDER.get(dateiname)
+    if bild is None:
+        return None
+
+    schluessel = (dateiname, tuple(groesse))
+    if schluessel not in _STRASSE_BILD_CACHE:
+        if dateiname == "strasse_kreuz.png":
+            bild = pygame.transform.rotate(bild, 45)
+        _STRASSE_BILD_CACHE[schluessel] = pygame.transform.smoothscale(
+            bild, groesse)
+    return _STRASSE_BILD_CACHE[schluessel]
+
+
+def strasse_verbindungen_berechnen(gebaeude_daten, liste_gebaeude):
+    """Berechnet für ein Straßengebäude, in welche Richtungen es verbunden ist.
+
+    Prüft die vier Nachbar-Kacheln (N, E, S, W) auf andere Straßengebäude.
+    Gibt eine frozenset mit Richtungskürzeln zurück (z. B. {"N", "E"}).
+    """
+    x = gebaeude_daten.get("kachel_x", 0)
+    y = gebaeude_daten.get("kachel_y", 0)
+
+    verbindungen = set()
+    for nachbar_x, nachbar_y, richtung in (
+        (x, y - 1, "N"),  # oben (Norden)
+        (x + 1, y, "E"),  # rechts (Osten)
+        (x, y + 1, "S"),  # unten (Süden)
+        (x - 1, y, "W"),  # links (Westen)
+    ):
+        for anderer in liste_gebaeude:
+            if anderer is gebaeude_daten:
+                continue
+            if (anderer.get("typ") == 9 and  # STRASSE_TYP = 9
+                    anderer.get("kachel_x") == nachbar_x and
+                    anderer.get("kachel_y") == nachbar_y):
+                verbindungen.add(richtung)
+                break
+
+    return frozenset(verbindungen)
+
+
+def strasse_verbindungen_aktualisieren(liste_gebaeude):
+    """Aktualisiert die Verbindungs-Richtungen aller Straßengebäude.
+
+    Wird nach jedem Bauen/Abreissen aufgerufen, damit sich die Straßenbilder
+    automatisch anpassen (z. B. aus einer Geraden wird eine Kreuzung).
+    Die Schülerwünsche (Drehungen und Kreuzungen werden gewechselt) werden hier umgesetzt.
+    """
+    for gebaeude in liste_gebaeude:
+        if gebaeude.get("typ") == 9:  # STRASSE_TYP
+            gebaeude["verbindungen"] = strasse_verbindungen_berechnen(
+                gebaeude, liste_gebaeude)
 
 
 def kategorie_auswahl(kategorie_taste, position=0):
@@ -203,6 +326,11 @@ def gebaeude_platzieren(liste_gebaeude, typ_index, kachel_x, kachel_y,
     if typ_index == 3 and forschung.ist_technologie_erforscht("forstwirtschaft"):
         neues_gebaeude["wald_vorrat"] = 30
         neues_gebaeude["wald_nachwuchs"] = 0
+    # Straße: erste Verbindungs-Richtungen berechnen (wird später in logistik.netz_aktualisieren()
+    # erneut aktualisiert, damit auch benachbarte Straßen ihr Bild anpassen).
+    if typ_index == 9:  # STRASSE_TYP
+        neues_gebaeude["verbindungen"] = strasse_verbindungen_berechnen(
+            neues_gebaeude, liste_gebaeude)
     liste_gebaeude.append(neues_gebaeude)
     breite, hoehe = _masse_fuer_typ(typ_index)
     print(f"{GEBAEUDE_TYPEN[typ_index]['name']} auf ({kachel_x}, {kachel_y}) platziert ({breite}x{hoehe} Kacheln).")
@@ -289,7 +417,11 @@ def _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten, breite, hoehe,
     kachel_breite = iso.ISO_KACHEL_BREITE    # 96
     kachel_hoehe = iso.ISO_KACHEL_HOEHE      # 48
 
-    if breite == 1 and hoehe == 1 and stapel_index:
+    if typ_index == 9:
+        bild_breite = kachel_breite
+        bild_hoehe = kachel_hoehe
+        links = fuss_x - bild_breite // 2
+    elif breite == 1 and hoehe == 1 and stapel_index:
         # Zweites Gebaeude auf derselben Kachel: kleiner, rechts oben.
         bild_breite = kachel_breite // 2 - 8
         bild_hoehe = kachel_hoehe * 2 - 8
@@ -298,12 +430,9 @@ def _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten, breite, hoehe,
         # Normales Gebaeude: Breite fuellt die Kachel (fast) aus.
         bild_breite = max(breite, hoehe) * kachel_breite - 8
         # Hoehe: Gebaeude ragen nach oben, damit sie hintereinander erkennbar
-        # sind (Universitaet nutzt das aus). Strasse bleibt flach.
-        if typ_daten.get("kuerzel") == "S":
-            bild_hoehe = kachel_hoehe - 8  # Strasse: flach, nur Kachelhoehe
-        else:
-            bild_hoehe = max(kachel_hoehe * 2, bild_breite * 3 // 4) \
-                if (breite > 1 or hoehe > 1) else kachel_hoehe * 2 - 8
+        # sind (Universitaet nutzt das aus).
+        bild_hoehe = max(kachel_hoehe * 2, bild_breite * 3 // 4) \
+            if (breite > 1 or hoehe > 1) else kachel_hoehe * 2 - 8
         links = fuss_x - bild_breite // 2
     oben = fuss_y - bild_hoehe
     return pygame.Rect(links, oben, bild_breite, bild_hoehe)
@@ -321,11 +450,26 @@ def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
         rect = _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten,
                                        breite, hoehe, fuss_x, fuss_y,
                                        stapel_index)
-        bild = bild_fuer_typ(typ_index, rect.size)
+        if typ_index == 9:
+            # Straße: dynamisches Bild nach Verbindungen
+            bild = strasse_bild_fuer_verbindungen(
+                gebaeude.get("verbindungen", frozenset()), rect.size)
+        else:
+            bild = bild_fuer_typ(typ_index, rect.size)
         if bild is not None:
             _fenster.blit(bild, rect)
         else:
             pygame.draw.rect(_fenster, typ_daten["farbe"], rect)
+    elif typ_index == 9 and strasse_bild_fuer_verbindungen(
+            gebaeude.get("verbindungen", frozenset()), (8, 8)) is not None:
+        # Straße mit dynamischem Bild (gerade, Kurve, T-Kreuzung, X-Kreuzung)
+        # basierend auf den Verbindungen zu benachbarten Straßen.
+        rect = _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten,
+                                       breite, hoehe, fuss_x, fuss_y,
+                                       stapel_index)
+        bild = strasse_bild_fuer_verbindungen(
+            gebaeude.get("verbindungen", frozenset()), rect.size)
+        _fenster.blit(bild, rect)
     elif bild_fuer_typ(typ_index, (8, 8)) is not None:
         # Normales Gebaeude mit Bild: Billboard auf dem Fusspunkt.
         rect = _gebauede_bild_rechteck(gebaeude, typ_index, typ_daten,
@@ -339,15 +483,16 @@ def _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite, hoehe,
                                 max(1, breite), hoehe)
     # Der weisse Rahmen wurde entfernt, da die gedrehten Gebaeude-Bilder
     # aus terra_nova_24_gebaeude_pngs bereits saubere eigene Rander haben.
-    text_schluessel = (typ_index, (20, 20, 20))
-    if text_schluessel not in _kuerzel_cache:
-        _kuerzel_cache[text_schluessel] = schrift.render(
-            typ_daten["kuerzel"], True, (20, 20, 20))
-    text = _kuerzel_cache[text_schluessel]
-    if breite == 1 and hoehe == 1:
-        _fenster.blit(text, text.get_rect(center=rect.center))
-    else:
-        _fenster.blit(text, (rect.left + 6, rect.top + 4))
+    if typ_index != 9:
+        text_schluessel = (typ_index, (20, 20, 20))
+        if text_schluessel not in _kuerzel_cache:
+            _kuerzel_cache[text_schluessel] = schrift.render(
+                typ_daten["kuerzel"], True, (20, 20, 20))
+        text = _kuerzel_cache[text_schluessel]
+        if breite == 1 and hoehe == 1:
+            _fenster.blit(text, text.get_rect(center=rect.center))
+        else:
+            _fenster.blit(text, (rect.left + 6, rect.top + 4))
     if gebaeude.get("arbeitet") is False and typ_index not in (0, 9, 14, 17):
         pygame.draw.circle(_fenster, (220, 70, 70),
                            (rect.right - 7, rect.top + 7), 4)

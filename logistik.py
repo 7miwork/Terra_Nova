@@ -242,6 +242,11 @@ def netz_aktualisieren(liste_gebaeude):
             ein_gebaeude["arbeitet"] = False
             ohne_anbindung += 1
 
+    # Straßen-Verbindungen aktualisieren, damit sich die Straßenbilder
+    # an die Nachbarn anpassen (Geraden werden zu Kurven, Kreuzungen, T-Kreuzungen usw.)
+    # Dies erfüllt den Schülerwunsch: "Drehungen und Kreuzungen müssen gewechselt werden"
+    gebaeude.strasse_verbindungen_aktualisieren(liste_gebaeude)
+
     return {"netz_kacheln": len(netz), "ohne_anbindung": ohne_anbindung}
 
 

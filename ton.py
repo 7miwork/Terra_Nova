@@ -25,8 +25,8 @@ Wie tausche ich einen Sound aus?
         SOUNDS = {"bauen": "bauen.wav", ...}
 
     Lege einfach eine eigene Datei mit dem gleichen Namen in den Ordner
-    ``sounds/`` — fertig. Die mitgelieferten Dateien erzeugt das Skript
-    ``sounds_erzeugen.py`` mit der Standardbibliothek.
+    ``audio/`` — fertig. Die mitgelieferten Dateien erzeugt das Skript
+    ``werkzeuge/sounds_erzeugen.py`` mit der Standardbibliothek.
 
 Konzepte in dieser Datei:
     ✓ try/except: Fehler abfangen, statt abzustuerzen
@@ -53,10 +53,10 @@ EFFEKT_LAUTSTAERKE = 0.70    # Effekte dürfen deutlicher sein
 # Knistern. Deshalb wird derselbe Ton innerhalb dieser Zeit nur einmal gestartet.
 SOUND_ABSTAND_MS = 80
 
-# Hintergrundmusik: ruhiger Sci-Fi-Loop (wird von sounds_erzeugen.py erzeugt)
+# Hintergrundmusik: ruhiger Sci-Fi-Loop (wird von werkzeuge/sounds_erzeugen.py erzeugt)
 MUSIK_DATEI = "hintergrundmusik.wav"
 
-# Ereignisname → Dateiname im Ordner sounds/
+# Ereignisname → Dateiname im Ordner audio/
 SOUNDS = {
     "bauen":              "bauen.wav",
     "abriss":             "abriss.wav",
@@ -74,7 +74,9 @@ SOUNDS = {
     "ausgeraubt":         "ausgeraubt.wav",
 }
 
-ORDNER_NAME = "sounds"
+# Sound-Dateien liegen nun im Unterordner audio/
+# (Sortierung nach Schüler-Hausaufgabe: Töne getrennt von anderen Medien)
+ORDNER_NAME = "audio"
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -92,7 +94,7 @@ _dateien_gemeldet = set()    # Dateien, für die schon einmal gewarnt wurde
 
 
 def sounds_ordner():
-    """Liefert den vollstaendigen Pfad des Ordners ``sounds``."""
+    """Liefert den vollstaendigen Pfad des Ordners ``audio``."""
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), ORDNER_NAME)
 
 
@@ -146,7 +148,7 @@ def mixer_bereit():
 
 
 def _effekt_laden(name):
-    """Laedt einen Effekt aus dem Ordner sounds/ und merkt ihn sich.
+    """Laedt einen Effekt aus dem Ordner audio/ und merkt ihn sich.
 
     Fehlt die Datei, gibt es EINEN Hinweis in der Konsole — und danach wird
     der Effekt einfach still uebersprungen. Kein Absturz.
@@ -169,8 +171,8 @@ def _effekt_laden(name):
     if not os.path.isfile(pfad):
         if dateiname not in _dateien_gemeldet:
             _dateien_gemeldet.add(dateiname)
-            _hinweis(f"Sounddatei fehlt: sounds/{dateiname} - "
-                     "starte 'python sounds_erzeugen.py'.")
+            _hinweis(f"Sounddatei fehlt: audio/{dateiname} - "
+                     "starte 'python werkzeuge/sounds_erzeugen.py'.")
         return None
 
     try:
@@ -262,8 +264,8 @@ def musik_starten():
     if not os.path.isfile(pfad):
         if MUSIK_DATEI not in _dateien_gemeldet:
             _dateien_gemeldet.add(MUSIK_DATEI)
-            _hinweis("Musikdatei fehlt: sounds/hintergrundmusik.wav - "
-                     "starte 'python sounds_erzeugen.py'.")
+            _hinweis("Musikdatei fehlt: audio/hintergrundmusik.wav - "
+                     "starte 'python werkzeuge/sounds_erzeugen.py'.")
         return False
     try:
         pygame.mixer.music.load(pfad)

@@ -4,7 +4,20 @@ Alle Änderungen am Projekt, sortiert nach Version (neueste zuerst).
 
 Jeder Eintrag trägt ein **Datum** (Format: TT.MM.JJJJ), wann die Änderung vorgenommen wurde.
 
-## [Unreleased] — 10.11.2026 — Neue Hausaufgabe & Straßenbilder-Ordner
+## [Unreleased] — 16.11.2026 — Schüler-Hausaufgaben eingearbeitet
+
+### 📄 Schüler-Hausaufgaben aus `Hausaufgaben/Neue/` eingearbeitet (16.11.2026)
+
+| # | Datum | Was | Datei |
+|---|-------|-----|-------|
+| 1 | 16.11.2026 | Straßenbilder von Schülern in `bilder/strasse/` kopiert (11 PNGs: gerade, Kurven, T-Kreuzungen, X-Kreuzung) | `bilder/strasse/` |
+| 2 | 16.11.2026 | Straßenbilder werden dynamisch nach Nachbar-Verbindungen gewählt (Geraden ↔ Kurven ↔ T-Kreuzungen ↔ X-Kreuzung) | `gebaeude.py`, `logistik.py` |
+| 3 | 16.11.2026 | Straßenbilder von Quadrat (Top-Down) in isometrische Raute konvertiert (128x64 px) für korrekte Iso-Ansicht | `bilder/strasse/` |
+| 3 | 16.11.2026 | `bilder_erzeugen.py` und `sounds_erzeugen.py` nach `werkzeuge/` verschoben (Schüler: Tools gehören getrennt) | `werkzeuge/` |
+| 4 | 16.11.2026 | Gebäude-Bilder nach `bilder/gebaeude/` verschoben (Schüler: Bilder nach Typ getrennt) | `bilder/gebaeude/` |
+| 5 | 16.11.2026 | Sound-Dateien von `sounds/` nach `audio/` verschoben (Schüler: Töne getrennt von anderen Medien) | `audio/` |
+| 6 | 16.11.2026 | `terra_nova_24_gebaeude_pngs/` nach `unnoetig/` verschoben (Schüler: doppelte Bilder) | `unnoetig/` |
+| 7 | 16.11.2026 | Code-Kommentare als `#` ergänzt (gebaeude.py, ton.py, logistik.py, CHANGELOG.md, README.md) | alle |
 
 ### 📄 Neue Hausaufgabe — 10.11.2026
 
