@@ -33,10 +33,13 @@ import os
 
 import pygame
 
+# Persistente Dateien liegen gemeinsam in saves/; keine absoluten
+# Schuelergeraete-Pfade werden in den Code geschrieben.
+import pfade
 import ton
 
 # Pfad neben dem Spielstand — gehört in .gitignore (persönliche Werte).
-DATEI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "einstellungen.json")
+DATEI = os.path.join(pfade.SAVES, "einstellungen.json")
 
 # Alle Einstellungen mit ihren Startwerten. Neue Einstellung? Hier eintragen —
 # Menü-Zeile, Begrenzung und Fehlbehandlung laufen darüber automatisch.
@@ -44,7 +47,7 @@ STANDARD = {
     "musik_lautstaerke": 0.45,   # 0.0 = stumm, 1.0 = voll (Standard aus ton.py)
     "effekt_lautstaerke": 0.70,
     "musik_an": True,            # Hintergrundmusik grundsätzlich erlaubt
-    "gitter_an": True,           # Gitterlinien zwischen den Kacheln
+    "gitter_an": False,          # Geschlossene Karte ohne sichtbare Würfelkanten
     "fps": 60,                   # Bildwiederholrate (Begrenzung)
     "kamera_tempo": 8,           # Kamera-Pixel pro Frame bei 60 FPS
 }

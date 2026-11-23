@@ -1,10 +1,9 @@
-# Beispielordner: Audio
+# Audio
 
-Hier liegen die Soundeffekte und die Hintergrundmusik des Spiels, zum
-Beispiel `bauen.wav`, `achievement.wav` und `hintergrundmusik.wav`.
+Dieser Ordner enthält alle WAV-Soundeffekte und die Hintergrundmusik
+(`hintergrundmusik.wav`) von Terra_Nova.
 
-Die Audiodateien sind von Bildern und Programmdateien getrennt. `ton.py`
-verwendet die Dateinamen aus diesem Ordner, um die Sounds im Spiel zu laden.
-
-Das ist ein Beispiel fuer eine moegliche Sortierung. Es ist keine Aufforderung,
-Dateien zu verschieben oder umzubenennen.
+Das Modul `spielmodule/ton.py` lädt die Dateien über den zentralen Audio-Pfad
+aus `spielmodule/pfade.py`. Mit `werkzeuge/sounds_erzeugen.py` können die
+Standard-Sounds neu erzeugt werden. Bilder und Python-Module bleiben getrennt,
+damit Dateien leichter gefunden und ersetzt werden können.

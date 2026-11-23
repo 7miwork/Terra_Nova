@@ -6,17 +6,17 @@ __pycache__/
 
 # ── Persoenlicher Spielstand ───────────────────────────────────────────────
 # Der Spielstand ist individuell pro Spielerin/Spieler und wird neu erzeugt.
-spielstand.json
-spielstand.json.tmp
+saves/*.json
+saves/*.json.tmp
 
 # ── Persoenliche Einstellungen (Lautstaerke, Grafik, FPS) ────────────────────
 # Das Einstellungsmenue schreibt eigene Werte - gehoeren nicht ins Repo.
-einstellungen.json
-einstellungen.json.tmp
+saves/einstellungen.json
+saves/einstellungen.json.tmp
 
 # ── Persoenliche Statistik (Gebaeude ueber alle Partien, Spielzeit) ────────
-statistik.json
-statistik.json.tmp
+saves/statistik.json
+saves/statistik.json.tmp
 
 # ── Editor-, System- und Hilfsdateien ──────────────────────────────────────
 .vscode/

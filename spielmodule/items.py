@@ -8,6 +8,9 @@ vorne sortiert, damit vordere Objekte hintere ueberdecken.
 """
 
 import os
+
+# Bilderpfade kommen aus pfade.py, nicht aus dem Ort dieses Moduls.
+import pfade
 import pygame
 import iso
 
@@ -50,7 +53,7 @@ def item_initialisieren(fenster_obj, kachel_groesse):
     _fenster = fenster_obj
     _kachel_groesse = kachel_groesse
     _schrift = pygame.font.Font(None, 23)
-    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "items")
+    bilder_ordner = pfade.BILDER_ITEMS
     _bilder = {}
     for typ_daten in ITEM_TYPEN:
         dateiname = typ_daten.get("bild")

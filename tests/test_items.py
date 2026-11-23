@@ -10,7 +10,14 @@ import sys
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Projektstamm und Spielmodule: main.py und flache Modulimporte sind erreichbar.
+projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spielmodule_ordner = os.path.join(projekt_ordner, "spielmodule")
+if projekt_ordner not in sys.path:
+    sys.path.insert(0, projekt_ordner)
+
+if spielmodule_ordner not in sys.path:
+    sys.path.insert(0, spielmodule_ordner)
 
 import pygame
 pygame.init()

@@ -6,7 +6,14 @@ import os
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Projektstamm und Spielmodule: main.py und flache Modulimporte sind erreichbar.
+projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spielmodule_ordner = os.path.join(projekt_ordner, "spielmodule")
+if projekt_ordner not in sys.path:
+    sys.path.insert(0, projekt_ordner)
+
+if spielmodule_ordner not in sys.path:
+    sys.path.insert(0, spielmodule_ordner)
 
 import pygame
 pygame.init()
@@ -14,6 +21,7 @@ import forschung
 import ressourcen
 import gebaeude
 import handel
+import pfade
 
 forschung.forschung_zuruecksetzen()
 werte = {"gold": 200, "energie": 200, "holz": 100, "stein": 100,
@@ -36,7 +44,7 @@ benoetigte_forschungen = {
 assert benoetigte_forschungen.issubset({t["id"] for t in forschung.TECHNOLOGIEN})
 assert len(gebaeude.GEBAEUDE_TYPEN) == len(ressourcen.GEBAEUDE_WIRTSCHAFT)
 assert len(gebaeude.GEBAEUDE_TYPEN) >= 19
-assert all(daten.get("bild") and os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bilder", daten["bild"]))
+assert all(daten.get("bild") and os.path.exists(os.path.join(pfade.BILDER_GEBAEUDE, daten["bild"]))
            for daten in gebaeude.GEBAEUDE_TYPEN)
 assert all(index in range(len(gebaeude.GEBAEUDE_TYPEN))
            for kat in gebaeude.GEBAEUDE_KATEGORIEN.values()

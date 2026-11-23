@@ -15,7 +15,14 @@ import sys
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Projektstamm und Spielmodule: main.py und flache Modulimporte sind erreichbar.
+projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spielmodule_ordner = os.path.join(projekt_ordner, "spielmodule")
+if projekt_ordner not in sys.path:
+    sys.path.insert(0, projekt_ordner)
+
+if spielmodule_ordner not in sys.path:
+    sys.path.insert(0, spielmodule_ordner)
 
 import pygame
 pygame.init()
@@ -128,8 +135,8 @@ assert panel.maus_ereignis(klick(innen)), "Klick im Fenster wird verbraucht"
 assert not panel.maus_ereignis(klick((5, 690))), \
     "Klick neben den Fenstern gehoert der Karte"
 
-# ── 8. Tasten S/C/I und Layout zuruecksetzen mit L ─────────────────────────
-for key, name in ((pygame.K_s, "verteidigung"), (pygame.K_c, "bauinfo"),
+# ── 8. Tasten V/C/I und Layout zuruecksetzen mit L ─────────────────────────
+for key, name in ((pygame.K_v, "verteidigung"), (pygame.K_c, "bauinfo"),
                   (pygame.K_i, "uebersicht")):
     assert panel.ist_sichtbar(name)
     pygame.event.post(taste(key))

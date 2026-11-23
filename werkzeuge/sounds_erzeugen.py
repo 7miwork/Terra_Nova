@@ -9,9 +9,9 @@ Wozu ist dieses Skript da?
     WAV-Dateien selbst — mit reinem Python (nur Standardbibliothek!).
 
     Das Spiel braucht dieses Skript NICHT zum Starten:
-    Die fertigen WAV-Dateien liegen im Ordner ``sounds/`` und werden mit
+    Die fertigen WAV-Dateien liegen im Ordner ``audio/`` und werden mit
     ausgeliefert. Wenn du einen Sound aendern willst, aenderst du hier die
-    Werte, laeufst einmal ``python sounds_erzeugen.py`` und hoerst dir das
+    Werte, laeufst einmal ``python werkzeuge/sounds_erzeugen.py`` und hoerst dir das
     Ergebnis im Spiel an.
 
 Was lernst du hier?
@@ -27,7 +27,7 @@ Technische Daten aller Dateien:
     Kanaele    : 1          (mono)
 
 Aufruf (Windows, PowerShell):
-    python sounds_erzeugen.py
+    python werkzeuge/sounds_erzeugen.py
 ===============================================================================
 """
 
@@ -35,7 +35,16 @@ import math
 import os
 import random
 import struct
+import sys
 import wave
+
+_projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_spielmodule_ordner = os.path.join(_projekt_ordner, "spielmodule")
+if _spielmodule_ordner not in sys.path:
+    sys.path.insert(0, _spielmodule_ordner)
+
+# Werkzeugskripte verwenden dieselben Projektpfade wie das laufende Spiel.
+import pfade
 
 
 # ── Konstanten (hier kannst du experimentieren) ─────────────────────────────
@@ -49,7 +58,7 @@ MAX_WERT = 32767            # Groesster Wert einer 16-Bit-Zahl mit Vorzeichen
 # So kannst du Aenderungen an der Musik wirklich vergleichen!
 ZUFALLS_SEED = 20240521
 
-ORDNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sounds")
+ORDNER = pfade.AUDIO
 
 
 # ═════════════════════════════════════════════════════════════════════════════

@@ -69,9 +69,19 @@ Heute in Stunde 9 lernen wir NEU dazu (die Verbesserungsvorschläge der Schüler
 """
 
 import os
+import sys
+
+# Die Spielmodule liegen im Ordner spielmodule/. Dieser Pfad wird vor
+# den flachen Importen wie import gebaeude hinzugefuegt.
+# Pfade zu Bildern, Tönen und Saves stehen dagegen in pfade.py.
+_projekt_ordner = os.path.dirname(os.path.abspath(__file__))
+_spielmodule_ordner = os.path.join(_projekt_ordner, "spielmodule")
+if _spielmodule_ordner not in sys.path:
+    sys.path.insert(0, _spielmodule_ordner)
+
+import pfade
 import chunks   # Chunk-Zustand gemeinsam mit forschung.py und spielstand.py nutzen
 import pygame
-import sys
 import random       # Für zufällige Planeten-Generation
 import gebaeude     # Gebäude-Modul aus Stunde 3 (+ Stunde 6)
 import hud          # HUD-Modul aus Stunde 4 (+ Stunde 6)
@@ -94,6 +104,7 @@ import iso           # Isometrische Ansicht: Raster zu Rauten (Schritt 2)
 import items         # Passive Gegenstände auf der Karte (Schritt 5)
 import planeten      # Planeten, Rohstoffe, Kartenparameter (Wunschliste)
 import kolonien      # Mehrere Kolonien auf verschiedenen Planeten (Wunschliste)
+import boden         # Bodentexturen und Kartenzeichnung
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -598,234 +609,19 @@ def sterne_generieren():
 # BLOCK: KARTE ZEICHNEN
 # ═════════════════════════════════════════════════════════════════════════════
 
-# Farben werden einmalig angelegt und nicht bei jedem Frame neu erstellt.
-BODEN_FARBEN = {
-    0: FARBE_ERDE_HELL,
-    1: FARBE_GRAS,
-    2: FARBE_GESTEIN,
-    3: FARBE_SAND,
-}
-
-# ── Boden-Texturen (Bilder statt einfarbiger Rechtecke) ──────────────────────
-# Die Bilder liegen unter bilder/terrain/ und werden 1:1 auf Kacheln skaliert.
-BODEN_BILDER = {}
-_boden_bilder_geladen = False
-
-
-def _boden_bilder_laden():
-    """Laedt die Boden-Texturen aus bilder/terrain/ einmalig."""
-    global _boden_bilder_geladen
-    if _boden_bilder_geladen:
-        return
-    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "terrain")
-    dateinamen = {
-        0: "erde.png",
-        1: "gras.png",
-        2: "stein.png",
-        3: "sand.png",
-    }
-    for typ_index, dateiname in dateinamen.items():
-        bild_pfad = os.path.join(bilder_ordner, dateiname)
-        if os.path.exists(bild_pfad):
-            bild = pygame.image.load(bild_pfad).convert_alpha()
-            BODEN_BILDER[typ_index] = bild
-    _boden_bilder_geladen = True
-
-# Raute-foermige Bodenbilder fuer die Iso-Ansicht (gecacht)
-_boden_bilder_iso_cache = {}
-
-
-def _boden_bild_iso(typ_index):
-    if typ_index in _boden_bilder_iso_cache:
-        return _boden_bilder_iso_cache[typ_index]
-    bild = BODEN_BILDER.get(typ_index)
-    if bild is None:
-        _boden_bilder_iso_cache[typ_index] = None
-        return None
-    breite = iso.ISO_KACHEL_BREITE
-    hoehe = iso.ISO_KACHEL_HOEHE
-    bild_skaliert = pygame.transform.scale(bild, (breite, hoehe))
-    oberflaeche = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
-    oberflaeche.blit(bild_skaliert, (0, 0))
-    punkte = [(breite // 2, 0), (breite, hoehe // 2),
-              (breite // 2, hoehe), (0, hoehe // 2)]
-    maske = pygame.Surface((breite, hoehe), pygame.SRCALPHA)
-    maske.fill((0, 0, 0, 0))
-    pygame.draw.polygon(maske, (255, 255, 255, 255), punkte)
-    for x in range(breite):
-        for y in range(hoehe):
-            if maske.get_at((x, y))[3] == 0:
-                oberflaeche.set_at((x, y), (0, 0, 0, 0))
-    _boden_bilder_iso_cache[typ_index] = oberflaeche
-    return oberflaeche
-
-
-
-
-def _farbe_dunkler(farbe, anteil=0.6):
-    """Macht eine Farbe dunkler (fuer die Erdwand an der Vorderkante).
-
-    Die Wand benutzt dieselbe Bodenfarbe, nur abgedunkelt — so sieht man
-    sofort, dass sie zur Karte gehoert und Schatten darstellt. Der Anteil
-    0.6 heisst: 60 Prozent der Helligkeit bleiben uebrig.
-    """
-    return tuple(max(0, min(255, int(kanal * anteil))) for kanal in farbe)
-
-
-def _karte_2d_zeichnen(gitter_an, erste_spalte, letzte_spalte,
-                       erste_zeile, letzte_zeile, kamera_anzeige_y):
-    """Zeichnet den Boden als flache Rechtecke (alte Ansicht).
-
-    Diese Funktion gibt es nur zum Vergleichen im Unterricht: Mit
-    ISO_ANSICHT = False laeuft das Spiel genau wie frueher weiter.
-    """
-    for zeile in range(erste_zeile, letzte_zeile):
-        pixel_y = zeile * KACHEL_GROESSE - kamera_anzeige_y
-        for spalte in range(erste_spalte, letzte_spalte):
-            pixel_x = spalte * KACHEL_GROESSE - kamera_x
-            kachel_rect = pygame.Rect(
-                pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            _boden_bilder_laden()
-            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
-            if _boden_bild is not None:
-                fenster.blit(
-                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
-                    kachel_rect)
-            else:
-                pygame.draw.rect(
-                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
-            if gitter_an:
-                pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
-
-
-def _karte_iso_zeichnen(gitter_an):
-    """Zeichnet den Boden als Rauten und die Erdwand an der Vorderkante.
-
-    Die Kacheln kommen von hinten nach vorne auf den Bildschirm, damit
-    spaeter Gebaeude und die Erdwand in der richtigen Reihenfolge liegen.
-    Die Erdwand ist ein dunkles Stueck unter der letzten Zeile und der
-    letzten Spalte — die Karte wirkt dadurch wie eine Platte, die ueber
-    dem Sternenhimmel schwebt.
-    """
-    kamera_anzeige_y = kamera_zeichnen_y()
-    kacheln = []
-    for zeile in range(WELT_HOEHE):
-        for spalte in range(WELT_BREITE):
-            # Nur sichtbare Rauten einsammeln (Culling aus iso.py).
-            ecke_x, ecke_y = iso.raster_zu_welt(spalte, zeile)
-            bild_x = ecke_x - kamera_x
-            bild_y = ecke_y - kamera_anzeige_y
-            if (bild_x + iso.ISO_HALB_BREITE < 0
-                    or bild_x - iso.ISO_HALB_BREITE > BILD_BREITE
-                    or bild_y + iso.ISO_KACHEL_HOEHE < 0
-                    or bild_y > BILD_HOEHE):
-                continue
-            kacheln.append((spalte, zeile))
-    # Von hinten nach vorne: kleinere Summe aus spalte + zeile zuerst.
-    kacheln.sort(key=lambda kachel: (kachel[0] + kachel[1], kachel[1]))
-    for spalte, zeile in kacheln:
-        punkte = iso.kachel_polygon(spalte, zeile, kamera_x, kamera_anzeige_y)
-        _boden_bilder_laden()
-        _boden_bild_iso_erg = _boden_bild_iso(karten_daten[zeile][spalte])
-        if _boden_bild_iso_erg is not None:
-            fenster.blit(_boden_bild_iso_erg,
-                         (punkte[0][0] - iso.ISO_HALB_BREITE, punkte[0][1]))
-        else:
-            pygame.draw.polygon(fenster, BODEN_FARBEN[karten_daten[zeile][spalte]],
-                            punkte)
-        if gitter_an:
-            pygame.draw.polygon(fenster, FARBE_GITTER, punkte, 1)
-
-def _kartenrand_hinten():
-    """Zeichnet eine duenne Kontur entlang der Rueckkante (Iso).
-
-    Die Rueckkante (obere Rautenreihe) hat keine Erdwand. Eine duenne
-    Kontur schliesst die Platte dort sauber ab, ohne dass eine Wand
-    ueber die Kacheln ragt.
-    """
-    kamera_anzeige_y = kamera_zeichnen_y()
-    oben = iso.raster_zu_welt(0, 0)
-    rechts = iso.raster_zu_welt(WELT_BREITE - 1, 0)
-    p0 = (oben[0], oben[1])
-    p1 = (rechts[0] + iso.ISO_HALB_BREITE, rechts[1] + iso.ISO_HALB_HOEHE)
-    punkte = [(p0[0] - kamera_x, p0[1] - kamera_anzeige_y),
-              (p1[0] - kamera_x, p1[1] - kamera_anzeige_y)]
-    # Culling
-    xs = [p[0] for p in punkte]
-    ys = [p[1] for p in punkte]
-    if (max(xs) < -20 or min(xs) > BILD_BREITE + 20
-            or max(ys) < -20 or min(ys) > BILD_HOEHE + 20):
-        return
-    pygame.draw.line(fenster, FARBE_KARTENRAND, punkte[0], punkte[1], KARTENRAND_DICKE)
-
-
-def _kartenrand_links():
-    """Zeichnet eine duenne Kontur entlang der Linkskante (Iso).
-
-    Die linke Kante (linke Rautenreihe) hat keine Erdwand. Eine duenne
-    Kontur schliesst die Platte dort sauber ab.
-    """
-    kamera_anzeige_y = kamera_zeichnen_y()
-    oben = iso.raster_zu_welt(0, 0)
-    links = iso.raster_zu_welt(0, WELT_HOEHE - 1)
-    p0 = (oben[0], oben[1])
-    p1 = (links[0] - iso.ISO_HALB_BREITE, links[1] + iso.ISO_HALB_HOEHE)
-    punkte = [(p0[0] - kamera_x, p0[1] - kamera_anzeige_y),
-              (p1[0] - kamera_x, p1[1] - kamera_anzeige_y)]
-    xs = [p[0] for p in punkte]
-    ys = [p[1] for p in punkte]
-    if (max(xs) < -20 or min(xs) > BILD_BREITE + 20
-            or max(ys) < -20 or min(ys) > BILD_HOEHE + 20):
-        return
-    pygame.draw.line(fenster, FARBE_KARTENRAND, punkte[0], punkte[1], KARTENRAND_DICKE)
-
-
 def karte_zeichnen():
-
-
     """Zeichnet nur den sichtbaren Ausschnitt der Planetenoberfläche.
 
-    Früher wurden alle 60 x 40 = 2.400 Kacheln geprüft. Sichtbar sind je nach
-    Kamera aber nur ungefähr 22 x 15 Kacheln. Die Start- und Endindizes sparen
-    deshalb viele Schleifendurchläufe und unnötige Rechteckprüfungen.
+    Die eigentliche Bodenzeichnung liegt im Modul spielmodule/boden.py.
+    Dieser kleine Aufrufer verbindet Kamera, Karte und Zeichenmodul.
     """
-    # Einstellung "Gitterlinien": lässt sich im Einstellungsmenü abschalten.
     gitter_an = einstellungen.wert("gitter_an")
-    # Isometrische Ansicht (Schritt 2): Rauten statt Rechtecke. Mit
-    # ISO_ANSICHT = False laeuft alles wie frueher (fuer den Vergleich).
-    if ISO_ANSICHT:
-        _karte_iso_zeichnen(gitter_an)
-        return
-    erste_spalte = max(0, kamera_x // KACHEL_GROESSE)
-    letzte_spalte = min(
-        WELT_BREITE,
-        (kamera_x + BILD_BREITE) // KACHEL_GROESSE + 2,
-    )
-    # Die Welt beginnt unter der Ressourcenleiste (siehe kamera_zeichnen_y).
     kamera_anzeige_y = kamera_zeichnen_y()
-    erste_zeile = max(0, kamera_anzeige_y // KACHEL_GROESSE)
-    letzte_zeile = min(
-        WELT_HOEHE,
-        (kamera_anzeige_y + BILD_HOEHE) // KACHEL_GROESSE + 2,
-    )
-
-    for zeile in range(erste_zeile, letzte_zeile):
-        pixel_y = zeile * KACHEL_GROESSE - kamera_anzeige_y
-        for spalte in range(erste_spalte, letzte_spalte):
-            pixel_x = spalte * KACHEL_GROESSE - kamera_x
-            kachel_rect = pygame.Rect(
-                pixel_x, pixel_y, KACHEL_GROESSE, KACHEL_GROESSE)
-            _boden_bilder_laden()
-            _boden_bild = BODEN_BILDER.get(karten_daten[zeile][spalte])
-            if _boden_bild is not None:
-                fenster.blit(
-                    pygame.transform.scale(_boden_bild, (KACHEL_GROESSE, KACHEL_GROESSE)),
-                    kachel_rect)
-            else:
-                pygame.draw.rect(
-                    fenster, BODEN_FARBEN[karten_daten[zeile][spalte]], kachel_rect)
-            if gitter_an:
-                pygame.draw.rect(fenster, FARBE_GITTER, kachel_rect, 1)
+    boden.karte_zeichnen(
+        karten_daten, ISO_ANSICHT, gitter_an,
+        WELT_BREITE, WELT_HOEHE,
+        kamera_x, kamera_anzeige_y,
+        BILD_BREITE, BILD_HOEHE)
 
 
 def items_generieren():
@@ -2604,6 +2400,7 @@ def spiel_starten():
     sterne_generieren()
     gebaeude.gebaeude_initialisieren(fenster, KACHEL_GROESSE)
     items.item_initialisieren(fenster, KACHEL_GROESSE)
+    boden.initialisieren(fenster, KACHEL_GROESSE)
     # Iso-Schritt 4 und 5: Gebaeude-, Logistik- und Item-Ansicht folgen
     # dem Schalter in main.py (kein Kreis-Import noetig).
     gebaeude.ansicht_setzen(ISO_ANSICHT)

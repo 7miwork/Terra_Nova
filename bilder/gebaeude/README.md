@@ -1,11 +1,8 @@
-# Beispielordner: Gebaeude
+# Gebäude-Bilder
 
-Hier liegen PNG-Bilder, die einzelne Gebaeude im Spiel darstellen, zum
-Beispiel `basis.png`, `farm.png` und `wohnhaus.png`.
+Dieser Ordner enthält die PNG-Dateien für die Gebäude, zum Beispiel
+`basis.png`, `farm.png`, `wohnhaus.png` und `kaserne.png`.
 
-Die Bilder sind zusammen in einem Ordner, weil sie alle dieselbe Aufgabe
-haben: Sie werden als Gebaeudegrafiken verwendet. `gebaeude.py` laedt die
-Bilder aus diesem Ordner.
-
-Das ist ein Beispiel fuer eine moegliche Sortierung. Es ist keine Aufforderung,
-Dateien zu verschieben oder umzubenennen.
+Das Modul `spielmodule/gebaeude.py` lädt die Bilder aus diesem Ordner über
+`spielmodule/pfade.py`. Die Trennung von Straße, Terrain und Items macht die
+Grafiken übersichtlich und verhindert Namenskonflikte.

@@ -38,6 +38,9 @@ Konzepte in dieser Datei:
 
 import os
 
+# Der Audioordner wird zentral in pfade.py festgelegt.
+import pfade
+
 import pygame
 
 
@@ -76,9 +79,6 @@ SOUNDS = {
 
 # Sound-Dateien liegen nun im Unterordner audio/
 # (Sortierung nach Schüler-Hausaufgabe: Töne getrennt von anderen Medien)
-ORDNER_NAME = "audio"
-
-
 # ═════════════════════════════════════════════════════════════════════════════
 # BLOCK 2: MODUL-VARIABLEN (das "Gedaechtnis" des Moduls)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -95,7 +95,7 @@ _dateien_gemeldet = set()    # Dateien, für die schon einmal gewarnt wurde
 
 def sounds_ordner():
     """Liefert den vollstaendigen Pfad des Ordners ``audio``."""
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), ORDNER_NAME)
+    return pfade.AUDIO
 
 
 def _datei_pfad(dateiname):

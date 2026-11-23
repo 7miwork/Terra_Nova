@@ -13,9 +13,11 @@ import os
 
 import pygame
 
+# Die Statistik wird mit den anderen JSON-Daten in saves/ gespeichert.
+import pfade
 import achievements
 
-DATEI = os.path.join(os.path.dirname(__file__), "statistik.json")
+DATEI = os.path.join(pfade.SAVES, "statistik.json")
 
 # Diese Felder gibt es im Profil und in der laufenden Partie.
 FELDER = ("spiele", "siege", "niederlagen", "zeit", "gebaeude", "forschung",

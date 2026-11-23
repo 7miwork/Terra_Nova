@@ -6,7 +6,14 @@ import sys
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Projektstamm und Spielmodule: main.py und flache Modulimporte sind erreichbar.
+projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spielmodule_ordner = os.path.join(projekt_ordner, "spielmodule")
+if projekt_ordner not in sys.path:
+    sys.path.insert(0, projekt_ordner)
+
+if spielmodule_ordner not in sys.path:
+    sys.path.insert(0, spielmodule_ordner)
 
 import pygame
 pygame.init()
@@ -37,15 +44,15 @@ print("Planeten: 6 Eintraege, alle Pflichtfelder, Phase 1 = Erde/Mond/Mars")
 # ── 2. Kartenparameter je Planet ─────────────────────────────────────────────
 assert planeten.karten_parameter("erde") == planeten.KARTEN_STANDARD
 assert planeten.karten_parameter("mond") == {
-    "gras_flaechen": 4, "gestein_flaechen": 9, "sand_flaechen": 3}
-# Unbekannter Planet behaelt die Originalwerte (8/5/6).
+    "gras_flaechen": 16, "gestein_flaechen": 36, "sand_flaechen": 12}
+# Unbekannter Planet behaelt die Originalwerte.
 assert planeten.karten_parameter("gibt_es_nicht") == planeten.KARTEN_STANDARD
 for planet_id in planeten.alle_ids():
     werte = planeten.karten_parameter(planet_id)
     assert set(werte) == set(planeten.KARTEN_STANDARD)
     assert all(isinstance(w, int) and w > 0 for w in werte.values())
-    assert sum(werte.values()) <= 24, planet_id   # nicht mehr als ~1/5 der Karte
-print("Kartenparameter: Erde 8/5/6, Mond 4/9/3, jeder Planet eigene Flaechen")
+    assert sum(werte.values()) <= 100, planet_id
+print("Kartenparameter: Erde 40/30/30, Mond 16/36/12, jeder Planet eigene Flaechen")
 
 
 # ── 3. Startressourcen je Planet ─────────────────────────────────────────────
@@ -109,14 +116,14 @@ print("Produktion: Planetenfaktor wirkt im Multiplikator und ueberlebt Speichern
 
 # ── 6. Karte des Planeten wird nach Parametern gebaut ────────────────────────
 main.karte_generieren("mond")
-assert len(main.karten_daten) == main.KARTE_HOEHE
-assert all(len(zeile) == main.KARTE_BREITE for zeile in main.karten_daten)
+assert len(main.karten_daten) == main.WELT_HOEHE
+assert all(len(zeile) == main.WELT_BREITE for zeile in main.karten_daten)
 assert set(sum(main.karten_daten, [])) <= {0, 1, 2, 3, 4}
-print("Karte: mond_kacheln in 60x40, Kacheltypen gueltig")
+print("Karte: Mond auf der Weltkarte in 200x150, Kacheltypen gueltig")
 
 
 # ── 7. Kolonien aufbauen und wechseln (kolonien.py + main) ──────────────────
-kolonien.hauptmodul_setzen(main, main.KARTE_BREITE, main.KARTE_HOEHE)
+kolonien.hauptmodul_setzen(main, main.WELT_BREITE, main.WELT_HOEHE)
 main.neues_spiel_starten()                       # frische Partie auf der Erde
 assert kolonien.anzahl() == 1
 assert kolonien.aktuelle_id() == "kolonie_1"
@@ -126,7 +133,7 @@ assert kolonien.naechster_freier_planet() == "mond"
 # Zustand der Erde markieren, damit wir den Wechsel erkennen.
 main.ressourcen_dict["gold"] = 777
 main.kamera_x = 123
-main.liste_gebaeude.append({"typ": 1, "x": 2, "y": 2, "arbeitet": True})
+main.liste_gebaeude.append({"typ": 1, "kachel_x": 2, "kachel_y": 2, "x": 2, "y": 2, "arbeitet": True})
 
 # Mond gruenden - Ablauf wie main.kolonie_gruenden, nur ohne UI:
 kolonien.stand_merken()
@@ -276,10 +283,10 @@ try:
 
     # Version-1-Spielstand waechst beim Laden automatisch auf Version 2:
     alt = {"version": 1,
-           "karten_daten": [[0] * main.KARTE_BREITE
-                            for _ in range(main.KARTE_HOEHE)],
+           "karten_daten": [[0] * main.WELT_BREITE
+                            for _ in range(main.WELT_HOEHE)],
            "ressourcen": {"gold": 42, "energie": 10},
-           "gebaeude": [{"typ": 1, "x": 1, "y": 1}],
+           "gebaeude": [{"typ": 1, "kachel_x": 1, "kachel_y": 1, "x": 1, "y": 1}],
            "kamera": {"x": 0, "y": 0},
            "auswahl": {"kategorie": "1", "position": 0,
                        "gebaeude": 0, "letztes_gebaeude": 0},

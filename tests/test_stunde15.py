@@ -5,7 +5,14 @@ import sys
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Projektstamm und Spielmodule: main.py und flache Modulimporte sind erreichbar.
+projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spielmodule_ordner = os.path.join(projekt_ordner, "spielmodule")
+if projekt_ordner not in sys.path:
+    sys.path.insert(0, projekt_ordner)
+
+if spielmodule_ordner not in sys.path:
+    sys.path.insert(0, spielmodule_ordner)
 
 import pygame
 
@@ -17,6 +24,7 @@ import handel
 import hud
 import missionen
 import ressourcen
+import pfade
 
 fenster = pygame.display.set_mode((1000, 700))
 forschung.forschung_initialisieren(fenster)
@@ -28,7 +36,7 @@ handel.handel_initialisieren(fenster)
 
 # Die beiden Grafiken liegen im Projekt und sind den neuen Typnummern
 # zugeordnet. Die bisherigen Gebäudetypen bleiben davor unverändert.
-bilder_ordner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bilder")
+bilder_ordner = pfade.BILDER_GEBAEUDE
 assert len(gebaeude.GEBAEUDE_TYPEN) == len(ressourcen.GEBAEUDE_WIRTSCHAFT)
 assert gebaeude.GEBAEUDE_TYPEN[19]["name"] == "Park"
 assert gebaeude.GEBAEUDE_TYPEN[20]["name"] == "Solarreaktor"

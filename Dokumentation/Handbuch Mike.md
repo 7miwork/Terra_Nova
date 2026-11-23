@@ -20,10 +20,16 @@ Hauptmenü lesen den Namen von dort.
 
 | Ort | Inhalt |
 |---|---|
-| `main.py` + Module | Spielcode — direkt hier starten mit `python main.py` |
-| `bilder/`, `sounds/` | Grafiken und Töne, die das Spiel lädt |
+| `main.py` | Startdatei — direkt hier starten mit `python main.py` |
+| `spielmodule/` | Spielcode-Module und `pfade.py` für zentrale Projektpfade |
+| `bilder/gebaeude/`, `bilder/strasse/`, `bilder/terrain/`, `bilder/items/` | Gebaeude-, Straßen-, Boden- und Gegenstands-Grafiken |
+| `audio/` | Soundeffekte und Hintergrundmusik |
+| `werkzeuge/` | Bilder- und Sound-Erzeugung |
+| `saves/` | Spielstand, Einstellungen und Statistik als JSON-Dateien |
 | `tests/` | Selbsttests: `test_*.py` und `check.py` |
 | `Dokumentation/` | Handbücher, PDFs (`PDF/`), Erklärbilder (`Erklaer Bilder/`) |
+| `Hausaufgaben/` | Unterrichtsaufgaben |
+| `Protokolle/` | Unterrichtsprotokolle |
 | `unnoetig/` | Ablage für Altlasten/Einmal-Skripte (nicht ins Repository) |
 
 ---

@@ -1,6 +1,9 @@
 """Gebäudetypen, Bildzuordnung, Kategorien und Mehrkachel-Platzierung."""
 
 import os
+
+# Bilderpfade kommen aus pfade.py, nicht aus dem Ort dieses Moduls.
+import pfade
 import pygame
 import iso           # Isometrische Ansicht: Rauten und Sortierung (Schritt 4)
 import forschung
@@ -90,7 +93,7 @@ def gebaeude_initialisieren(fenster_obj, kachel_groesse):
     _kachel_groesse = kachel_groesse
     # Gebäude-Bilder liegen nun im Unterordner bilder/gebaeude/
     # (Sortierung nach Schüler-Hausaufgabe: Bilder nach Typ getrennt)
-    bilder_ordner = os.path.join(os.path.dirname(__file__), "bilder", "gebaeude")
+    bilder_ordner = pfade.BILDER_GEBAEUDE
     _bilder = {}
     _bilder_cache = {}
     _kuerzel_cache = {}
@@ -161,7 +164,7 @@ def strasse_bilder_laden():
     die Kachelgröße skaliert.
     """
     global _STRASSE_BILDER
-    strasse_ordner = os.path.join(os.path.dirname(__file__), "bilder", "strasse")
+    strasse_ordner = pfade.BILDER_STRASSE
     if not os.path.isdir(strasse_ordner):
         return
     for datei in sorted(os.listdir(strasse_ordner)):
@@ -541,6 +544,15 @@ def _gebaeude_iso_zeichnen(liste_gebaeude, kamera_x, kamera_y, schrift):
         if (fuss_x < -200 or fuss_x > _fenster.get_width() + 200
                 or fuss_y < -200 or fuss_y > _fenster.get_height() + 200):
             continue
+        schatten_breite = iso.ISO_HALB_BREITE * max(1, breite)
+        schatten_hoehe = iso.ISO_KACHEL_HOEHE * max(1, hoehe) // 3
+        schatten = [
+            (fuss_x, fuss_y - 2),
+            (fuss_x + schatten_breite // 2, fuss_y + schatten_hoehe // 2),
+            (fuss_x, fuss_y + schatten_hoehe),
+            (fuss_x - schatten_breite // 2, fuss_y + schatten_hoehe // 2),
+        ]
+        pygame.draw.polygon(_fenster, (20, 20, 20, 55), schatten)
         _gebauede_zeichen_einmal(gebaeude, typ_index, typ_daten, breite,
                                  hoehe, fuss_x, fuss_y, stapel_index, schrift)
 

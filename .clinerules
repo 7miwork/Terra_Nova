@@ -180,4 +180,16 @@ python -m py_compile "pfad/datei.py"
 python tests/check.py
 ```
 
+## 15. Neue Projektstruktur
+
+- Neue Python-Module fuer das Spiel kommen in `spielmodule/`.
+- `main.py` bleibt im Projektordner und fuegt `spielmodule/` am Anfang vor den
+  flachen Modul-Importen zu `sys.path` hinzu.
+- Tests und Werkzeuge fuegen bei Bedarf ebenfalls `spielmodule/` zu `sys.path`
+  hinzu und koennen `main.py` aus dem Projektordner importieren.
+- Alle Projektdatenpfade fuer Bilder, Audio und Saves werden ueber
+  `spielmodule/pfade.py` verwendet. Neue Module duerfen Projektpfade nicht
+  selbst mit `__file__` zusammenbauen.
+- Spielstände, Einstellungen und Statistik liegen in `saves/*.json`.
+
 ---

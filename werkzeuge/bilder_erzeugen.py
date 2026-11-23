@@ -4,19 +4,28 @@ Fortgeschrittener Kurs (Gegner)
     Fuer Kaserne, Raumschiffwerft und Laserturm gibt es (noch) keine
     echten Bilder. Dieses Skript zeichnet einfache 64x64-Platzhalter:
     eine flache Farbe, ein paar deutliche Formen und ein grosser
-    Anfangsbuchstabe. Die fertigen PNGs liegen im Ordner bilder/ und
+    Anfangsbuchstabe. Die fertigen PNGs liegen im Ordner bilder/gebaeude/ und
     werden MITGELIEFERT — das Spiel braucht dieses Skript also nicht
     zum Starten. Es dient nur zum Nachvollziehen (und zum Neuerzeugen,
     falls jemand die Farben aendern will).
 
     Schuelerinnen und Schueler koennen spaeter eigene Bilder zeichnen
-    und sie einfach unter demselben Dateinamen in bilder/ speichern
+    und sie einfach unter demselben Dateinamen in bilder/gebaeude/ speichern
     (wie beim Park und beim Solarreaktor).
 
 Nur Standardbibliothek + Pygame (kein numpy).
 """
 
 import os
+import sys
+
+_projekt_ordner = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_spielmodule_ordner = os.path.join(_projekt_ordner, "spielmodule")
+if _spielmodule_ordner not in sys.path:
+    sys.path.insert(0, _spielmodule_ordner)
+
+# Werkzeugskripte verwenden dieselben Projektpfade wie das laufende Spiel.
+import pfade
 
 import pygame
 
@@ -88,17 +97,17 @@ def bild_zeichnen(grundfarbe, form, buchstabe):
 
 
 def main():
-    """Erzeugt alle Platzhalter und speichert sie im Ordner bilder/."""
+    """Erzeugt alle Platzhalter und speichert sie im Ordner bilder/gebaeude/."""
     pygame.init()
     # Anzeige initialisieren, damit convert_alpha() funktioniert — im
     # Testbetrieb mit SDL_VIDEODRIVER=dummy ist das ebenfalls erlaubt.
     pygame.display.set_mode((1, 1))
-    ordner = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bilder")
+    ordner = pfade.BILDER_GEBAEUDE
     os.makedirs(ordner, exist_ok=True)
     for index, (dateiname, farbe, form, buchstabe) in BILDER.items():
         pfad = os.path.join(ordner, dateiname)
         pygame.image.save(bild_zeichnen(farbe, form, buchstabe), pfad)
-        print(f"Platzhalter erzeugt: bilder/{dateiname} (Gebaeudetyp {index})")
+        print(f"Platzhalter erzeugt: bilder/gebaeude/{dateiname} (Gebaeudetyp {index})")
     pygame.quit()
 
 

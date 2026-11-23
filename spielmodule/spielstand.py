@@ -10,12 +10,14 @@ import handel
 import ressourcen
 import logistik
 import achievements
+# Spielstände liegen in saves/ und bleiben von den Python-Modulen getrennt.
+import pfade
 import missionen
 import gegner
 import ereignisse
 
 
-DATEI = os.path.join(os.path.dirname(__file__), "spielstand.json")
+DATEI = os.path.join(pfade.SAVES, "spielstand.json")
 VERSION = 2
 # Version 1 = Spielstand ohne Kolonie-Liste; er wird beim Laden automatisch
 # nach Version 2 umgeschrieben (eine einzige Kolonie auf der Erde).

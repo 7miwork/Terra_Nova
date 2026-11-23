@@ -20,17 +20,25 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 
 | Ort | Inhalt |
 |---|---|
-| `main.py` + Module | Der Spielcode — direkt hier starten mit `python main.py` |
+| `main.py` | Startdatei — direkt hier starten mit `python main.py` |
+| `spielmodule/` | Spielmodule wie Gebäude, Gegner, Logistik, HUD und `pfade.py` |
+| `spielmodule/boden.py` | 2D-/Iso-Bodentexturen, Übergänge, Kartenkante und Terrain-Culling |
 | `bilder/terrain/` | Boden-Bilder (erde, gras, sand, stein) |
 | `bilder/gebaeude/` | Gebäude-Bilder (nach Schüler-Hausaufgabe sortiert) |
 | `bilder/items/` | Item-Icons |
 | `bilder/strasse/` | Straßenbilder (gerade, Kurven, T-Kreuzungen, X-Kreuzung — von Schülern erstellt) |
-| `audio/` | Sound-Dateien (wurde von `sounds/` verschoben, Schüler-Hausaufgabe) |
+| `audio/` | Sound-Dateien und Hintergrundmusik |
 | `werkzeuge/` | Hilfs-Skripte (`bilder_erzeugen.py`, `sounds_erzeugen.py` — nicht zum Spielstart nötig) |
+| `saves/` | Persönliche JSON-Dateien: `spielstand.json`, `einstellungen.json`, `statistik.json` |
 | `tests/` | Selbsttests: `test_*.py` und `check.py` (siehe unten) |
-| **`Dokumentation/`** | Alle Handbücher und Anleitungen (.md), PDFs unter `Dokumentation/PDF/`, Erklärbilder unter `Dokumentation/Erklaer Bilder/` |
-| **`unnoetig/`** | Ablage für Dateien, die das Spiel nicht braucht (Altlasten, Einmal-Skripte, doppelte Bilder) — wird nicht ins Repository mitgeschrieben |
-| **`saves/`** | Ordner für gespeicherte Spielstände (Schüler-Vorschlag aus der Hausaufgabe) |
+| `Dokumentation/` | Alle Handbücher und Anleitungen (.md), PDFs und Erklärbilder |
+| `Hausaufgaben/` | Unterrichtsaufgaben |
+| `Protokolle/` | Unterrichtsprotokolle |
+| `unnoetig/` | Ablage für lokale Altlasten — wird nicht ins Repository mitgeschrieben |
+
+Die Projektpfade stehen in `spielmodule/pfade.py`. `main.py` fügt
+`spielmodule/` zu `sys.path` hinzu, sodass die bestehenden flachen Importe
+wie `import gebaeude` weiter funktionieren.
 
 ## Steuerung (Auszug, vollständig mit Taste H im Spiel)
 
@@ -62,9 +70,9 @@ ohne Ton weiter (alle Tonfunktionen sind try/except-gesichert).
 | Phase | Thema | Zentrale Dateien |
 |---|---|---|
 | 0 | Ordner-Umzug und Ist-Analyse | alle |
-| 1/2 | Sound und Musik | `ton.py`, `sounds_erzeugen.py`, `sounds/` |
-| 3 | Straßennetz und Logistik | `logistik.py` |
-| 4 | Gegner und Verteidigung | `gegner.py`, neue Gebäude 21–23 |
+| 1/2 | Sound und Musik | `spielmodule/ton.py`, `werkzeuge/sounds_erzeugen.py`, `audio/` |
+| 3 | Straßennetz und Logistik | `spielmodule/logistik.py` |
+| 4 | Gegner und Verteidigung | `spielmodule/gegner.py`, neue Gebäude 21–23 |
 | 5 | Dokumentation und Abnahme | README, Handbücher, `tests/check.py` |
 
 Details für Schülerinnen und Schüler: **Dokumentation/FORTGESCHRITTEN_SCHUELERHANDBUCH.md**.
@@ -119,7 +127,7 @@ Alle am Stück (PowerShell im Spielordner):
 ## Spielstände
 
 Speichern: Pause öffnen und **S** drücken (oder Knopf „Speichern“).
-Laden: im Hauptmenü **L**. Ergebnis ist die lesbare Datei `spielstand.json`.
+Laden: im Hauptmenü **L**. Ergebnis ist die lesbare Datei `saves/spielstand.json`.
 Alte Spielstände bleiben ladbar: Neue Felder (`gegner`, `verteidiger`,
 `raumschiffe`) bekommen beim Laden ihre Startwerte.
 

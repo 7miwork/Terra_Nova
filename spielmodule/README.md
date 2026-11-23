@@ -1,10 +1,9 @@
-# Beispielordner: Spielmodule
+# Spielmodule
 
-Dieser vorbereitete Beispielordner ist fuer Python-Dateien gedacht, die
-Spielfunktionen umsetzen koennten, zum Beispiel Gebaeude, Logistik, Handel
-oder Ressourcen.
+Dieser Ordner enthält die Python-Module des Spiels, zum Beispiel Gebäude,
+Gegner, Handel, Logistik, Menüs, Ressourcen und Speichern. `main.py` bleibt
+im Projektordner und fügt diesen Ordner zu `sys.path` hinzu.
 
-Die vorhandenen Dateien wie `gebaeude.py`, `logistik.py` und `ressourcen.py`
-bleiben vorerst an ihrem jetzigen Platz. Sie hierher zu verschieben waere nur
-ein moeglicher Vorschlag. Dafuer muessten spaeter auch die Importe angepasst
-und getestet werden.
+`pfade.py` stellt die zentralen Projektpfade bereit. Neue Python-Module für
+das Spiel werden hier abgelegt. Pfade zu Bildern, Audio und Saves sollen nur
+über `pfade.py` gebaut werden.

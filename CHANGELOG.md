@@ -1,99 +1,63 @@
 # Changelog — Terra_Nova
 
-Alle Änderungen am Projekt, sortiert nach Version (neueste zuerst).
+Alle Änderungen sind nach Datum geordnet.
 
-Jeder Eintrag trägt ein **Datum** (Format: TT.MM.JJJJ), wann die Änderung vorgenommen wurde.
-
-## [Unreleased] — 16.11.2026 — Schüler-Hausaufgaben eingearbeitet
-
-### 📄 Schüler-Hausaufgaben aus `Hausaufgaben/Neue/` eingearbeitet (16.11.2026)
+## 23.11.2026 — Projektstruktur aufgeräumt
 
 | # | Datum | Was | Datei |
 |---|-------|-----|-------|
-| 1 | 16.11.2026 | Straßenbilder von Schülern in `bilder/strasse/` kopiert (11 PNGs: gerade, Kurven, T-Kreuzungen, X-Kreuzung) | `bilder/strasse/` |
-| 2 | 16.11.2026 | Straßenbilder werden dynamisch nach Nachbar-Verbindungen gewählt (Geraden ↔ Kurven ↔ T-Kreuzungen ↔ X-Kreuzung) | `gebaeude.py`, `logistik.py` |
-| 3 | 16.11.2026 | Straßenbilder von Quadrat (Top-Down) in isometrische Raute konvertiert (128x64 px) für korrekte Iso-Ansicht | `bilder/strasse/` |
-| 3 | 16.11.2026 | `bilder_erzeugen.py` und `sounds_erzeugen.py` nach `werkzeuge/` verschoben (Schüler: Tools gehören getrennt) | `werkzeuge/` |
-| 4 | 16.11.2026 | Gebäude-Bilder nach `bilder/gebaeude/` verschoben (Schüler: Bilder nach Typ getrennt) | `bilder/gebaeude/` |
-| 5 | 16.11.2026 | Sound-Dateien von `sounds/` nach `audio/` verschoben (Schüler: Töne getrennt von anderen Medien) | `audio/` |
-| 6 | 16.11.2026 | `terra_nova_24_gebaeude_pngs/` nach `unnoetig/` verschoben (Schüler: doppelte Bilder) | `unnoetig/` |
-| 7 | 16.11.2026 | Code-Kommentare als `#` ergänzt (gebaeude.py, ton.py, logistik.py, CHANGELOG.md, README.md) | alle |
+| 1 | 23.11.2026 | Die 22 Spielmodule nach `spielmodule/` verschoben und flache Importe über `sys.path` verdrahtet | `main.py`, `spielmodule/*.py`, `tests/*.py` |
+| 2 | 23.11.2026 | Zentrale Projektpfade in `pfade.py` ergänzt | `spielmodule/pfade.py` |
+| 3 | 23.11.2026 | JSON-Dateien nach `saves/` verschoben und `.gitignore` angepasst | `saves/*.json`, `.gitignore` |
+| 4 | 23.11.2026 | Gebäude-, Straßen-, Terrain- und Item-Pfade sowie Audio-Pfade zentralisiert | `spielmodule/gebaeude.py`, `spielmodule/items.py`, `spielmodule/ton.py`, `main.py` |
+| 5 | 23.11.2026 | Werkzeug-Skripte auf Bilder und Audio umgestellt | `werkzeuge/bilder_erzeugen.py`, `werkzeuge/sounds_erzeugen.py` |
+| 6 | 23.11.2026 | Temporäre Dateien und `__pycache__/` entfernt | mehrere Dateien |
+| 7 | 23.11.2026 | Veraltete Tests für Verteidigungstaste, Kartenwerte und alte Kartengrößen aktualisiert | `tests/test_fortgeschritten_panels.py`, `tests/test_planeten_kolonien.py` |
+| 8 | 23.11.2026 | README, Cline-Regeln, Handbuch, Hausaufgabe und Ordner-READMEs aktualisiert | `.clinerules`, `README.md`, `Dokumentation/Handbuch Mike.md`, `Hausaufgaben/17112026.md` |
+| 9 | 23.11.2026 | Isometrische Bodenrauten bekommen minimale Überlappung und Gitterlinien sind standardmäßig aus | `main.py`, `spielmodule/einstellungen.py`, `saves/einstellungen.json` |
+| 10 | 23.11.2026 | Hausaufgabe um ideale Lösung und hilfreiche Code-Hinweise ergänzt | `Hausaufgaben/17112026.md`, `main.py`, `spielmodule/*.py`, `werkzeuge/*.py` |
+| 11 | 23.11.2026 | Zentrales Saves-Verzeichnis wird automatisch angelegt und Tests erhalten Pfadkommentare | `spielmodule/pfade.py`, `tests/*.py` |
+| 12 | 23.11.2026 | Veraltete Pfadzusammenstellungen entfernt und zentrale Pfad-/Import-Hinweise in den Code übernommen | `main.py`, `spielmodule/*.py`, `werkzeuge/*.py`, `tests/*.py` |
+| 13 | 23.11.2026 | Bodentexturen und Kartenzeichnung in `spielmodule/boden.py` ausgelagert | `main.py`, `spielmodule/boden.py`, `tests/test_boden.py` |
+| 14 | 23.11.2026 | Sanfte Bodentypübergänge, geschlossene Kartenkante und dezente Gebäude-Schatten ergänzt | `spielmodule/boden.py`, `spielmodule/gebaeude.py` |
+| 15 | 23.11.2026 | Punkt 5 vollständig verdrahtet: Karten-/Terrainzeichnen aus `main.py` in `spielmodule/boden.py` ausgelagert | `main.py`, `spielmodule/boden.py`, `tests/test_boden.py` |
 
-### 📄 Neue Hausaufgabe — 10.11.2026
-
-| # | Datum | Was | Datei |
-|---|-------|-----|-------|
-| 1 | 10.11.2026 | Neue Hausaufgabe "Projektstruktur aufräumen & Straßenbilder erstellen" erstellt | `Hausaufgaben/10112026.md` |
-| 2 | 10.11.2026 | Ordner `bilder/strasse/` angelegt (leer, für Schüler-Straßenbilder) | `bilder/strasse/` |
-
-### 🔴 Fehler behoben
-
-| # | Datum | Fehler | Ursache | Fix | Datei |
-|---|-------|--------|---------|-----|-------|
-| 1 | 09.11.2026 | `S` öffnete Verteidigungspanel **und** scrollte Kamera gleichzeitig | `pygame.K_s` belegt für Kamera-Scroll **und** Verteidigungspanel-Toggle | `S` ist wieder nur Kamera-Scroll nach unten; Verteidigungspanel auf `V` gelegt | `main.py` |
-| 2 | 09.11.2026 | Leertaste setzt Spielgeschwindigkeit auf 0/1 zurück (vorherige 2×/4× geht verloren) | Inline-Toggle überschrieb `spiel_geschwindigkeit` ohne `_geschwindigkeit_vor_pause` zu nutzen | Leertaste ruft nun `pause_umschalten()` auf, das die Geschwindigkeit vor der Pause merkt und wiederherstellt | `main.py` |
-| 3 | 09.11.2026 | README sagt „Leertaste baut Gebäude“, Spiel pausiert stattdessen | Dokumentation nicht mit Code abgeglichen | README-Tabelle korrigiert: Leertaste = Pause/Start, Linksklick = Bauen | `README.md` |
-
-### 🟡 Überflüssigkeiten entfernt — 09.11.2026
-
-| # | Datum | Was | Wo | Datei |
-|---|-------|-----|-----|-------|
-| 4 | 09.11.2026 | 9 doppelte Funktionsdefinitionen entfernt (`kamera_zeichnen_y`, `karte_generieren`, `karte_zeichnen`, `_hintergrund_aus_sternen_aufbauen`, `sterne_generieren`, `_farbe_dunkler`, `_karte_2d_zeichnen`, `_kartenrand_links`, `items_generieren`) | `main.py` — 3415 → 2881 Zeilen | `main.py` |
-| 5 | 09.11.2026 | `__pycache__/` Ordner gelöscht (Projektstamm, `unnoetig/`, `tests/`) | Repository | — |
-| 6 | 09.11.2026 | Temporäre Debug-Skripte und Backups gelöscht (`_check_*.py`, `_remove_dupes*.py`, `*.backup_*`) | Projektstamm | — |
-
-### 📄 Dokumentation — 09.11.2026
-
-- `CHANGELOG.md` neu erstellt (diese Datei)
-- `README.md`: Steuerungstabelle korrigiert (S = Kamera-Scroll, V = Verteidigung, Leertaste, Linksklick)
-- `.clinerules`: Regel #7 — Tastenbelegung entzerrt (S für Kamera-Scroll, V für Verteidigung); Regel #9 — Changelog-Einträge benötigen Timestamp
-
-### 🚀 Weitere Verbesserungen — 09.11.2026
+## 17.11.2026 — Musik und große Gebäudedarstellung
 
 | # | Datum | Was | Datei |
 |---|-------|-----|-------|
-| 7 | 09.11.2026 | Items werden beim Bauen auf derselben Kachel eingesammelt (entfernt + Ressource gutgeschrieben) statt einfach überdeckt | `main.py` |
-| 8 | 09.11.2026 | Einstellungen: "Auf Standard zurücksetzen" + "Fertig (Esc)" zu einem Button "Zurücksetzen & Fertig" zusammengeführt, der nach dem Klick das Menü schließt | `einstellungen.py` |
-| 9 | 09.11.2026 | Straße: Bild passt besser auf die Kachel (2D: fast volle Kachelbreite, Iso: flache Höhe statt Gebäude-Höhe) | `gebaeude.py` |
+| 1 | 17.11.2026 | Hintergrundmusik und Sound-Funktionen erweitert | `spielmodule/ton.py` |
+| 2 | 17.11.2026 | Darstellung großer Gebäude getestet | `tests/test_grosse_gebaeude_darstellung.py` |
+| 3 | 17.11.2026 | Große Gebäudedarstellung in der Lade- und Zeichenlogik verbessert | `spielmodule/gebaeude.py` |
 
----
-
-### 🔴 Fehler behoben
-
-| # | Datum | Fehler | Ursache | Fix | Datei |
-|---|-------|--------|---------|-----|-------|
-| 1 | 09.11.2026 | `S` öffnete Verteidigungspanel **und** scrollte Kamera gleichzeitig | `pygame.K_s` belegt für Kamera-Scroll **und** Verteidigungspanel-Toggle | `S` ist wieder nur Kamera-Scroll nach unten; Verteidigungspanel auf `V` gelegt | `main.py` |
-| 2 | 09.11.2026 | Leertaste setzt Spielgeschwindigkeit auf 0/1 zurück (vorherige 2×/4× geht verloren) | Inline-Toggle überschrieb `spiel_geschwindigkeit` ohne `_geschwindigkeit_vor_pause` zu nutzen | Leertaste ruft nun `pause_umschalten()` auf, das die Geschwindigkeit vor der Pause merkt und wiederherstellt | `main.py` |
-| 3 | 09.11.2026 | README sagt „Leertaste baut Gebäude“, Spiel pausiert stattdessen | Dokumentation nicht mit Code abgeglichen | README-Tabelle korrigiert: Leertaste = Pause/Start, Linksklick = Bauen | `README.md` |
-
-### 🟡 Überflüssigkeiten entfernt — 09.11.2026
-
-| # | Datum | Was | Wo | Datei |
-|---|-------|-----|-----|-------|
-| 4 | 09.11.2026 | 9 doppelte Funktionsdefinitionen entfernt (`kamera_zeichnen_y`, `karte_generieren`, `karte_zeichnen`, `_hintergrund_aus_sternen_aufbauen`, `sterne_generieren`, `_farbe_dunkler`, `_karte_2d_zeichnen`, `_kartenrand_links`, `items_generieren`) | `main.py` — 3415 → 2881 Zeilen | `main.py` |
-| 5 | 09.11.2026 | `__pycache__/` Ordner gelöscht (Projektstamm, `unnoetig/`, `tests/`) | Repository | — |
-| 6 | 09.11.2026 | Temporäre Debug-Skripte und Backups gelöscht (`_check_*.py`, `_remove_dupes*.py`, `*.backup_*`) | Projektstamm | — |
-
-### 📄 Dokumentation — 09.11.2026
-
-- `CHANGELOG.md` neu erstellt (diese Datei)
-- `README.md`: Steuerungstabelle korrigiert (S = Kamera-Scroll, V = Verteidigung, Leertaste, Linksklick)
-- `.clinerules`: Regel #7 — Tastenbelegung entzerrt (S für Kamera-Scroll, V für Verteidigung); Regel #9 — Changelog-Einträge benötigen Timestamp
-
-### 🚀 Weitere Verbesserungen — 09.11.2026
+## 16.11.2026 — Schüler-Arbeiten eingearbeitet
 
 | # | Datum | Was | Datei |
 |---|-------|-----|-------|
-| 7 | 09.11.2026 | Items werden beim Bauen auf derselben Kachel eingesammelt (entfernt + Ressource gutgeschrieben) statt einfach überdeckt | `main.py` |
-| 8 | 09.11.2026 | Einstellungen: "Auf Standard zurücksetzen" + "Fertig (Esc)" zu einem Button "Zurücksetzen & Fertig" zusammengeführt, der nach dem Klick das Menü schließt | `einstellungen.py` |
-| 9 | 09.11.2026 | Straße: Bild passt besser auf die Kachel (2D: fast volle Kachelbreite, Iso: flache Höhe statt Gebäude-Höhe) | `gebaeude.py` |
+| 1 | 16.11.2026 | Straßenbilder von Schülern in `bilder/strasse/` zusammengeführt | `bilder/strasse/` |
+| 2 | 16.11.2026 | Straßenbilder werden nach Nachbar-Verbindungen gewählt | `spielmodule/gebaeude.py`, `spielmodule/logistik.py` |
+| 3 | 16.11.2026 | Werkzeugskripte nach `werkzeuge/` verschoben | `werkzeuge/bilder_erzeugen.py`, `werkzeuge/sounds_erzeugen.py` |
+| 4 | 16.11.2026 | Gebäude-Bilder nach `bilder/gebaeude/` verschoben | `bilder/gebaeude/` |
+| 5 | 16.11.2026 | Sound-Dateien nach `audio/` verschoben | `audio/` |
+| 6 | 16.11.2026 | Doppelte Gebäude-Bilder nach `unnoetig/` verschoben | `unnoetig/` |
 
----
+## 10.11.2026 — Neue Hausaufgabe
 
-## Legende
+| # | Datum | Was | Datei |
+|---|-------|-----|-------|
+| 1 | 10.11.2026 | Hausaufgabe zur Projektstruktur angelegt | `Hausaufgaben/10112026.md` |
+| 2 | 10.11.2026 | Leeren Ordner `bilder/strasse/` angelegt | `bilder/strasse/` |
 
-- `main.py` — Hauptspiel (Steuerung, Spielschleife, Pause/Tick-System)
-- `README.md` — Projekt-Dokumentation und Steuerungsübersicht
-- `.clinerules` — Konventionen für die Arbeit am Projekt
+## 09.11.2026 — Tasten, Pause und Codebereinigung
 
----
+| # | Datum | Was | Datei |
+|---|-------|-----|-------|
+| 1 | 09.11.2026 | S-Konflikt aufgelöst: S scrollt nur nach unten | `main.py` |
+| 2 | 09.11.2026 | Verteidigungspanel auf Taste V gelegt | `main.py` |
+| 3 | 09.11.2026 | Leertaste merkt und stellt die Geschwindigkeit vor der Pause wieder her | `main.py` |
+| 4 | 09.11.2026 | README-Tabelle an die tatsächliche Steuerung angeglichen | `README.md` |
+| 5 | 09.11.2026 | Neun doppelte Funktionsdefinitionen entfernt | `main.py` |
+| 6 | 09.11.2026 | `__pycache__/` und temporäre Debug-Skripte entfernt | Projektstamm, `tests/`, `unnoetig/` |
+| 7 | 09.11.2026 | Items werden beim Bauen eingesammelt | `main.py` |
+| 8 | 09.11.2026 | Einstellungs-Buttons zusammengeführt | `spielmodule/einstellungen.py` |
+| 9 | 09.11.2026 | Straßenbildgröße in Iso- und 2D-Ansicht verbessert | `spielmodule/gebaeude.py` |
