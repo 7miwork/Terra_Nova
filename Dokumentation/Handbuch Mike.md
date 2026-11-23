@@ -289,7 +289,41 @@ oder den Block über ein kleines Python-Skript mit `\\r?\\n`-Mustern ersetzen.
 
 ## 16. Hausaufgaben (Aktuell & Vergangene)
 
-### Aktuelle Hausaufgabe (10.11.2026)
+### Aktuelle Hausaufgabe (24.11.2026)
+
+**Datei:** `Hausaufgaben/24112026.md`
+**Abgabe:** beim nächsten Unterrichtstermin
+**Thema:** Das Spiel schneller, klarer und schöner machen
+
+**Drei Aufgaben (je 100 Punkte, gesamt 300):**
+
+| Aufgabe | Thema |
+|---------|-------|
+| 1 | Zeit und Leistung messen |
+| 2 | Grafische Optimierung prüfen |
+| 3 | Verbesserungsplan erstellen |
+
+Die Schüler untersuchen reale Stellen wie `spielmodule/boden.py`,
+`spielmodule/iso.py`, `spielmodule/gebaeude.py`,
+`spielmodule/einstellungen.py` und `spielstand.py`. Sie sollen nicht
+programmmieren oder Dateien ändern. Gefordert sind Messidee, Begründung,
+Umsetzungsvorschlag und ein passender Test.
+
+---
+
+### Vergangene Hausaufgabe (17.11.2026)
+
+**Datei:** `Hausaufgaben/17112026.md`
+**Abgabe:** beim nächsten Unterrichtstermin
+**Thema:** Neue Projektstruktur ansehen und bewerten
+
+Die Schüler ordnen echte Projektteile zu, prüfen zentrale Pfade und bewerten
+die Übersichtlichkeit der Ordner. Es gibt drei Aufgaben mit jeweils genau
+einem Punkt.
+
+---
+
+### Vergangene Hausaufgabe (10.11.2026)
 
 **Datei:** `Hausaufgaben/10112026.md`  
 **Abgabe:** Samstag, 14.11.2026  

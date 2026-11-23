@@ -38,6 +38,9 @@ Unterordnern von `bilder/` und die Töne in `audio/`.
 - Bei der grafischen Prüfung wurden Würfel-Seiten in den Terrain-PNGs als
   Ursache für die Zuckerwürfel-Darstellung erkannt und in `boden.py`
   durch eine echte obere Rautenmaske ersetzt.
+- Die Einstellungsaktionen wurden getrennt: `Zurücksetzen` setzt Werte zurück,
+  `Fertig` schließt das Menü. Die kombinierte Beschriftung entfällt.
+- Eine neue Optimierungs-Hausaufgabe `Hausaufgaben/24112026.md` wurde angelegt.
 
 ## Fehler und Lösung
 

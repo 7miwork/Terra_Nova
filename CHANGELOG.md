@@ -23,6 +23,7 @@ Alle Änderungen sind nach Datum geordnet.
 | 15 | 23.11.2026 | Punkt 5 vollständig verdrahtet: Karten-/Terrainzeichnen aus `main.py` in `spielmodule/boden.py` ausgelagert | `main.py`, `spielmodule/boden.py`, `tests/test_boden.py` |
 | 16 | 24.11.2026 | Würfel-Seiten aus Terrain-PNGs bei der Iso-Darstellung entfernt und Bodentexturen als echte Rautenmasken gerendert | `spielmodule/boden.py`, `tests/test_boden.py` |
 | 17 | 24.11.2026 | Einstellungs-Knopf in getrennte Befehle `Zurücksetzen` und `Fertig` aufgeteilt | `spielmodule/einstellungen.py`, `tests/test_einstellungen.py` |
+| 18 | 24.11.2026 | Neue Optimierungs-Hausaufgabe mit Leistung, Grafik und Verbesserungsplan erstellt | `Hausaufgaben/24112026.md` |
 
 ## 17.11.2026 — Musik und große Gebäudedarstellung
 
