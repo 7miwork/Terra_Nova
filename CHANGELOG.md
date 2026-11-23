@@ -22,6 +22,7 @@ Alle Änderungen sind nach Datum geordnet.
 | 14 | 23.11.2026 | Sanfte Bodentypübergänge, geschlossene Kartenkante und dezente Gebäude-Schatten ergänzt | `spielmodule/boden.py`, `spielmodule/gebaeude.py` |
 | 15 | 23.11.2026 | Punkt 5 vollständig verdrahtet: Karten-/Terrainzeichnen aus `main.py` in `spielmodule/boden.py` ausgelagert | `main.py`, `spielmodule/boden.py`, `tests/test_boden.py` |
 | 16 | 24.11.2026 | Würfel-Seiten aus Terrain-PNGs bei der Iso-Darstellung entfernt und Bodentexturen als echte Rautenmasken gerendert | `spielmodule/boden.py`, `tests/test_boden.py` |
+| 17 | 24.11.2026 | Einstellungs-Knopf in getrennte Befehle `Zurücksetzen` und `Fertig` aufgeteilt | `spielmodule/einstellungen.py`, `tests/test_einstellungen.py` |
 
 ## 17.11.2026 — Musik und große Gebäudedarstellung
 

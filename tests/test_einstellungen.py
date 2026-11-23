@@ -132,9 +132,18 @@ with tempfile.TemporaryDirectory() as ordner:
     assert einstellungen.laden() is True    # Änderung steht in der Datei
     assert einstellungen.wert("gitter_an") == (not vorher)
 
-    # Klick auf "Fertig" (letzte Zeile) führt zurück.
-    letzte = len(einstellungen.ZEILEN) - 1
-    assert einstellungen.mausklick(einstellungen._zeile_rect(letzte).center) == "zurueck"
+    # Zurücksetzen wirkt allein und bleibt im Menü; Fertig schließt separat.
+    einstellungen.menue_oeffnen()
+    einstellungen.setzen("fps", 120)
+    reset_index = next(i for i, zeile in enumerate(einstellungen.ZEILEN)
+                       if zeile[1] == "zuruecksetzen")
+    fertig_index = next(i for i, zeile in enumerate(einstellungen.ZEILEN)
+                        if zeile[1] == "fertig")
+    assert einstellungen.mausklick(
+        einstellungen._zeile_rect(reset_index).center) is None
+    assert einstellungen.wert("fps") == 60
+    assert einstellungen.mausklick(
+        einstellungen._zeile_rect(fertig_index).center) == "zurueck"
 
     # Slider per Klick in die Mitte ≈ 50 %.
     einstellungen.menue_oeffnen()
