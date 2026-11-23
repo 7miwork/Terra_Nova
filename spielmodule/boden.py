@@ -67,8 +67,8 @@ def _uebergangs_farbe(typ_index):
 
 def _iso_bild(typ_index, nachbarn=None):
     """Erzeugt eine gecachte rautenfoermige Bodenoberflaeche."""
-    nachbarn = nachbarn or {}
-    cache_schluessel = (typ_index, tuple(sorted(nachbarn.items())))
+    del nachbarn
+    cache_schluessel = typ_index
     if cache_schluessel in _iso_cache:
         return _iso_cache[cache_schluessel]
     bild = _bilder.get(typ_index)
@@ -80,8 +80,31 @@ def _iso_bild(typ_index, nachbarn=None):
     hoehe = iso.ISO_KACHEL_HOEHE
     surface_breite = breite + ISO_UEBERLAPPUNG
     surface_hoehe = hoehe + ISO_UEBERLAPPUNG
+
+    # Die PNG-Dateien enthalten einen kompletten kleinen Wuerfel.
+    # Hier wird nur die obere Diamantfloche aus dem PNG ausgeschnitten.
+    # Damit keine Seitenwaende als neue Wuerfel in die Karte ragen.
+    quelle_breite = bild.get_width()
+    quelle_hoehe = bild.get_height()
+    quelle_punkte = [
+        (quelle_breite // 2, quelle_hoehe // 16),
+        (quelle_breite * 15 // 16, quelle_hoehe // 2),
+        (quelle_breite // 2, quelle_hoehe * 15 // 16),
+        (quelle_breite // 16, quelle_hoehe // 2),
+    ]
+    quelle_maske = pygame.Surface(
+        (quelle_breite, quelle_hoehe), pygame.SRCALPHA)
+    pygame.draw.polygon(
+        quelle_maske, (255, 255, 255, 255), quelle_punkte)
+    ausschnitt = pygame.Surface(
+        (quelle_breite, quelle_hoehe), pygame.SRCALPHA)
+    ausschnitt.blit(bild, (0, 0))
+    for x in range(quelle_breite):
+        for y in range(quelle_hoehe):
+            if quelle_maske.get_at((x, y))[3] == 0:
+                ausschnitt.set_at((x, y), (0, 0, 0, 0))
     bild_klein = pygame.transform.scale(
-        bild, (surface_breite, surface_hoehe))
+        ausschnitt, (surface_breite, surface_hoehe))
     oberflaeche = pygame.Surface(
         (surface_breite, surface_hoehe), pygame.SRCALPHA)
     oberflaeche.blit(bild_klein, (0, 0))
@@ -99,29 +122,6 @@ def _iso_bild(typ_index, nachbarn=None):
         for y in range(surface_hoehe):
             if maske.get_at((x, y))[3] == 0:
                 oberflaeche.set_at((x, y), (0, 0, 0, 0))
-    for richtung, anderer_typ in sorted(nachbarn.items()):
-        andere_farbe = _uebergangs_farbe(anderer_typ)
-        if andere_farbe is None:
-            continue
-        if richtung == "unten":
-            pygame.draw.line(
-                oberflaeche, andere_farbe,
-                (surface_breite // 2, surface_hoehe - 7),
-                (surface_breite // 2 + surface_breite // 4,
-                 surface_hoehe - 7 - surface_hoehe // 8),
-                4)
-        elif richtung == "links":
-            pygame.draw.line(
-                oberflaeche, andere_farbe,
-                (surface_breite // 4, surface_hoehe // 2),
-                (surface_breite // 2, surface_hoehe - 7),
-                4)
-        elif richtung == "rechts":
-            pygame.draw.line(
-                oberflaeche, andere_farbe,
-                (surface_breite // 2, surface_hoehe - 7),
-                (surface_breite * 3 // 4, surface_hoehe // 2),
-                4)
     _iso_cache[cache_schluessel] = oberflaeche
     return oberflaeche
 
@@ -145,44 +145,6 @@ def _2d_zeichnen(karten_daten, gitter_an, erste_spalte, letzte_spalte,
                 bild_klein = pygame.transform.scale(
                     bild, (_kachel_groesse + 2, _kachel_groesse + 2))
                 _fenster.blit(bild_klein, (pixel_x - 1, pixel_y - 1))
-                typ_index = karten_daten[zeile][spalte]
-                nachbarn = {
-                    "oben": karten_daten[zeile - 1][spalte]
-                    if zeile > 0 else typ_index,
-                    "unten": karten_daten[zeile + 1][spalte]
-                    if zeile + 1 < len(karten_daten) else typ_index,
-                    "links": karten_daten[zeile][spalte - 1]
-                    if spalte > 0 else typ_index,
-                    "rechts": karten_daten[zeile][spalte + 1]
-                    if spalte + 1 < len(karten_daten[zeile]) else typ_index,
-                }
-                streifen = 3
-                for richtung, anderer_typ in nachbarn.items():
-                    if anderer_typ == typ_index:
-                        continue
-                    farbe = _uebergangs_farbe(anderer_typ)
-                    if richtung == "oben":
-                        pygame.draw.rect(
-                            _fenster, farbe,
-                            (pixel_x - 1, pixel_y - 1,
-                             _kachel_groesse + 2, streifen))
-                    elif richtung == "unten":
-                        pygame.draw.rect(
-                            _fenster, farbe,
-                            (pixel_x - 1,
-                             pixel_y + _kachel_groesse - streifen,
-                             _kachel_groesse + 2, streifen))
-                    elif richtung == "links":
-                        pygame.draw.rect(
-                            _fenster, farbe,
-                            (pixel_x - 1, pixel_y - 1,
-                             streifen, _kachel_groesse + 2))
-                    elif richtung == "rechts":
-                        pygame.draw.rect(
-                            _fenster, farbe,
-                            (pixel_x + _kachel_groesse - streifen,
-                             pixel_y - 1,
-                             streifen, _kachel_groesse + 2))
             else:
                 pygame.draw.rect(
                     _fenster,

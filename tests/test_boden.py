@@ -24,7 +24,10 @@ boden.initialisieren(fenster, 48)
 assert boden.BODEN_FARBEN[0] == (160, 140, 110)
 assert boden.BODEN_FARBEN[1] == (100, 160, 80)
 assert boden.ISO_UEBERLAPPUNG == 2
-assert boden._uebergangs_farbe(1) == (127, 177, 111)
+raute = boden._iso_bild(1)
+assert raute is not None
+assert raute.get_width() == 98
+assert raute.get_height() == 50
 
 karte = [
     [0, 1, 2, 3],

@@ -242,34 +242,6 @@ FARBE_WEISS         = (255, 255, 255)    # Für Texte und helle Sterne
 FARBE_GELB_STERN    = (255, 240, 200)    # Warme Sterne
 FARBE_BLAU_STERN    = (200, 220, 255)    # Blaue Sterne
 
-# ── Farben — Planeten-Oberfläche (wie Final Earth 2) ──────────────────────
-# Auf einem fremden Planeten gibt es verschiedene Bodenarten.
-# Jede Bodenart hat eine eigene Farbe — wie in Final Earth 2!
-# Hellbraun — normaler Erdboden (der häufigste Untergrund)
-FARBE_ERDE_HELL     = (160, 140, 110)
-# Dunkelbraun — fruchtbare Erde (gut für Pflanzen)
-FARBE_ERDE_DUNKEL   = (130, 110, 80)
-# Grün — Grasfläche (kommt später für Gebäude)
-FARBE_GRAS          = (100, 160, 80)
-# Dunkelgrau — Gestein / Felsen (schwer zu bearbeiten)
-FARBE_GESTEIN       = (90,  90,  95)
-# Sandfarbe — Wüstenfläche (wie in Final Earth 2)
-FARBE_SAND          = (195, 185, 150)
-
-# ── Farben — Gitterlinien ───────────────────────────────────────────────────
-# Die Gitternetz-Linien zwischen den Kacheln.
-# In Final Earth 2 siehst du ein feines Gitter auf der Oberfläche.
-FARBE_GITTER       = (60, 55, 50)       # Dunkle Gitterlinien
-
-# ── Ansicht: 2D oder isometrisch ────────────────────────────────────────────
-# True = Rauten-Ansicht (3D-Effekt wie OpenTTD), False = alte Rechtecke.
-# Zum Vergleichen im Unterricht einfach umschalten und neu starten.
-ISO_ANSICHT = True
-ERDWAND_HOEHE = 14   # So hoch ist die Erdwand an der Vorderkante (in Pixeln)
-# So dick und hell ist die Umrandung um die ganze Karte (Iso).
-FARBE_KARTENRAND = (90, 110, 140)
-KARTENRAND_DICKE = 2
-
 # ── Farben — Text und HUD ──────────────────────────────────────────────────
 # In Final Earth 2 gibt es eine Anzeige mit Informationen.
 FARBE_TEXT_HELL     = (220, 220, 220)   # Helles Grau für Text
@@ -709,25 +681,6 @@ FARBE_SCHWARZ       = (0,   0,   0  )    # Reines Schwarz — der Weltraum
 FARBE_WEISS         = (255, 255, 255)    # Für Texte und helle Sterne
 FARBE_GELB_STERN    = (255, 240, 200)    # Warme Sterne
 FARBE_BLAU_STERN    = (200, 220, 255)    # Blaue Sterne
-
-# ── Farben — Planeten-Oberfläche (wie Final Earth 2) ──────────────────────
-# Auf einem fremden Planeten gibt es verschiedene Bodenarten.
-# Jede Bodenart hat eine eigene Farbe — wie in Final Earth 2!
-# Hellbraun — normaler Erdboden (der häufigste Untergrund)
-FARBE_ERDE_HELL     = (160, 140, 110)
-# Dunkelbraun — fruchtbare Erde (gut für Pflanzen)
-FARBE_ERDE_DUNKEL   = (130, 110, 80)
-# Grün — Grasfläche (kommt später für Gebäude)
-FARBE_GRAS          = (100, 160, 80)
-# Dunkelgrau — Gestein / Felsen (schwer zu bearbeiten)
-FARBE_GESTEIN       = (90,  90,  95)
-# Sandfarbe — Wüstenfläche (wie in Final Earth 2)
-FARBE_SAND          = (195, 185, 150)
-
-# ── Farben — Gitterlinien ───────────────────────────────────────────────────
-# Die Gitternetz-Linien zwischen den Kacheln.
-# In Final Earth 2 siehst du ein feines Gitter auf der Oberfläche.
-FARBE_GITTER       = (60, 55, 50)       # Dunkle Gitterlinien
 
 # ── Ansicht: 2D oder isometrisch ────────────────────────────────────────────
 # True = Rauten-Ansicht (3D-Effekt wie OpenTTD), False = alte Rechtecke.
