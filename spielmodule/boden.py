@@ -68,6 +68,7 @@ def _uebergangs_farbe(typ_index):
 def _iso_bild(typ_index, nachbarn=None):
     """Erzeugt eine gecachte rautenfoermige Bodenoberflaeche."""
     del nachbarn
+    bilder_laden()
     cache_schluessel = typ_index
     if cache_schluessel in _iso_cache:
         return _iso_cache[cache_schluessel]

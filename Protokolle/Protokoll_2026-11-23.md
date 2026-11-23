@@ -35,6 +35,9 @@ Unterordnern von `bilder/` und die Töne in `audio/`.
 - Gebäude erhalten in der Iso-Ansicht dezente transparente Fußbodenschatten.
 - Punkt 5 wurde abgeschlossen: Die Bodentextur- und Kartendarstellung liegt
   vollständig in `spielmodule/boden.py`; `main.py` ruft dieses Modul auf.
+- Bei der grafischen Prüfung wurden Würfel-Seiten in den Terrain-PNGs als
+  Ursache für die Zuckerwürfel-Darstellung erkannt und in `boden.py`
+  durch eine echte obere Rautenmaske ersetzt.
 
 ## Fehler und Lösung
 
